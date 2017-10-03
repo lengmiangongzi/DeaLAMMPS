@@ -3176,7 +3176,7 @@ namespace HMM
 	void HMMProblem<dim>::run ()
 	{
 		// Current machine number of processes per node
-		machine_ppn=16;
+		machine_ppn=28;
 
 		// Number of replicas in MD-ensemble
 		nrepl=1;
@@ -3189,7 +3189,7 @@ namespace HMM
 		// Set the dealii communicator using a limited amount of available processors
 		// because dealii fails if processors do not have assigned cells. Plus, dealii
 		// might not scale indefinitely
-		set_dealii_procs(machine_ppn*10);
+		set_dealii_procs(1/*machine_ppn*10*/);
 
 		// Initialize global lammps communicator
 		// init_lammps_procs();
