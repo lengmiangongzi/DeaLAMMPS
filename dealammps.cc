@@ -511,7 +511,7 @@ namespace HMM
 		// is nts > 1000 * strain so that v_load < v_sound...
 		// Declaration of run parameters
 		double dts = 2.0; // timestep length in fs
-		int nts = 200; // number of timesteps
+		int nts = 2000; // number of timesteps
 		// Temperature
 		double tempt = 200.0;
 
@@ -1024,6 +1024,10 @@ namespace HMM
 						}
 					}
 
+					std::cout << avg_upd_strain_tensor[0][0] << " " << avg_upd_strain_tensor[0][1] << " " << avg_upd_strain_tensor[0][2] << std::endl;
+					std::cout << avg_upd_strain_tensor[1][0] << " " << avg_upd_strain_tensor[1][1] << " " << avg_upd_strain_tensor[1][2] << std::endl;
+					std::cout << avg_upd_strain_tensor[2][0] << " " << avg_upd_strain_tensor[2][1] << " " << avg_upd_strain_tensor[2][2] << std::endl;
+
 					sprintf(filename, "%s/last.%s.upstrain", macrostatelocout, cell_id);
 					write_tensor<dim>(filename, avg_upd_strain_tensor);
 
@@ -1225,7 +1229,7 @@ namespace HMM
 				component = 2;
 				value = 0.0;
 				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.
-						|| fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.)
+						/*|| fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.*/)
 				{
 					ysupport_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
 					boundary_values.insert(std::pair<types::global_dof_index, double>
@@ -1235,7 +1239,7 @@ namespace HMM
 				component = 0;
 				value = 0.0;
 				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.
-						|| fabs(cell->vertex(v)(0) - +ll/2.) < eps/3.)
+						/*|| fabs(cell->vertex(v)(0) - +ll/2.) < eps/3.*/)
 				{
 					ysupport_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
 					boundary_values.insert(std::pair<types::global_dof_index, double>
@@ -1431,14 +1435,14 @@ namespace HMM
 					}
 				component = 2;
 				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.
-						|| fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.)
+						/*|| fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.*/)
 					{
 						boundary_values.insert(std::pair<types::global_dof_index, double>
 								(cell->vertex_dof_index (v, component), value));
 					}
 				component = 0;
 				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.
-						|| fabs(cell->vertex(v)(0) - +ll/2.) < eps/3.)
+						/*|| fabs(cell->vertex(v)(0) - +ll/2.) < eps/3.*/)
 					{
 						boundary_values.insert(std::pair<types::global_dof_index, double>
 								(cell->vertex_dof_index (v, component), value));
