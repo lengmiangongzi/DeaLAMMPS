@@ -942,7 +942,7 @@ namespace HMM
 		displacement_update_grads (quadrature_formula.size(),
 				std::vector<Tensor<1,dim> >(dim));
 
-		double strain_perturbation = 0.002;
+		double strain_perturbation = 0.01;
 
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
 
@@ -1224,7 +1224,8 @@ namespace HMM
 
 				component = 2;
 				value = 0.0;
-				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.)
+				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.
+						|| fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.)
 				{
 					ysupport_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
 					boundary_values.insert(std::pair<types::global_dof_index, double>
@@ -1233,7 +1234,8 @@ namespace HMM
 
 				component = 0;
 				value = 0.0;
-				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.)
+				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.
+						|| fabs(cell->vertex(v)(0) - +ll/2.) < eps/3.)
 				{
 					ysupport_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
 					boundary_values.insert(std::pair<types::global_dof_index, double>
@@ -1428,13 +1430,15 @@ namespace HMM
 								(cell->vertex_dof_index (v, component), value));
 					}
 				component = 2;
-				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.)
+				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.
+						|| fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.)
 					{
 						boundary_values.insert(std::pair<types::global_dof_index, double>
 								(cell->vertex_dof_index (v, component), value));
 					}
 				component = 0;
-				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.)
+				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.
+						|| fabs(cell->vertex(v)(0) - +ll/2.) < eps/3.)
 					{
 						boundary_values.insert(std::pair<types::global_dof_index, double>
 								(cell->vertex_dof_index (v, component), value));
