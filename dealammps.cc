@@ -570,18 +570,18 @@ namespace HMM
 		sprintf(cfile, "%s/%s", location, "in.set.lammps");
 		lammps_file(lmp,cfile);
 
-		if (me == 0) std::cout << "               "
+		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-				<< "Compute current state data...       " << std::endl;
+				<< "Compute current state data...       " << std::endl;*/
 		// Set the state of the testing box at the beginning of the simulation
 		// (either from initial end state or from previous testing end state).
 		if(compute_finit)
 		{
 			// Use the initial state if history path in the phases space is to be
 			// discarded
-			if (me == 0) std::cout << "               "
+			/*if (me == 0) std::cout << "               "
 					<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-					<< "   ... from init state data...       " << std::endl;
+					<< "   ... from init state data...       " << std::endl;*/
 			sprintf(mfile, "%s/%s", statelocout, initdata);
 		}
 		else
@@ -589,19 +589,19 @@ namespace HMM
 			// Check if a previous state has already been computed specifically for
 			// this quadrature point, otherwise use the initial state (which is the
 			// last state of this quadrature point)
-			if (me == 0) std::cout << "               "
+			/*if (me == 0) std::cout << "               "
 					<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-					<< "   ... from previous state data...   " << std::flush;
+					<< "   ... from previous state data...   " << std::flush;*/
 			sprintf(mfile, "%s/%s", statelocout, straindata_last);
 			std::ifstream ifile(mfile);
 			if (ifile.good()){
-				if (me == 0) std::cout << "  specifically computed." << std::endl;
+				/*if (me == 0) std::cout << "  specifically computed." << std::endl;*/
 				ifile.close();
 
 				sprintf(cline, "print 'specifically computed'"); lammps_command(lmp,cline);
 			}
 			else{
-				if (me == 0) std::cout << "  initially computed." << std::endl;
+				/*if (me == 0) std::cout << "  initially computed." << std::endl;*/
 				sprintf(mfile, "%s/%s", statelocout, initdata);
 
 				sprintf(cline, "print 'initially computed'"); lammps_command(lmp,cline);
@@ -609,9 +609,9 @@ namespace HMM
 		}
 		std::ifstream ifile(mfile);
 		if (!ifile.good()){
-			if (me == 0) std::cout << "               "
+			/*if (me == 0) std::cout << "               "
 					<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-					<< "Unable to open beginning state file to read" << std::endl;
+					<< "Unable to open beginning state file to read" << std::endl;*/
 		}
 		else ifile.close();
 
@@ -628,23 +628,23 @@ namespace HMM
 			}
 
 		// Run the NEMD simulations of the strained box
-		if (me == 0) std::cout << "               "
+		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-				<< "   ... reading and executing in.strain.lammps.       " << std::endl;
+				<< "   ... reading and executing in.strain.lammps.       " << std::endl;*/
 		sprintf(cfile, "%s/%s", location, "in.strain.lammps");
 		lammps_file(lmp,cfile);
 
 
-		if (me == 0) std::cout << "               "
+		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-				<< "Saving state data...       " << std::endl;
+				<< "Saving state data...       " << std::endl;*/
 		// Save data to specific file for this quadrature point
 		sprintf(cline, "write_restart %s/%s", statelocout, straindata_last); lammps_command(lmp,cline);
 
 
-		if (me == 0) std::cout << "               "
+		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-				<< "Homogenization of stiffness and stress using in.elastic.lammps...       " << std::endl;
+				<< "Homogenization of stiffness and stress using in.elastic.lammps...       " << std::endl;*/
 		// Loading initial state stresses used to compute the SECANT stiffness
 		for(unsigned int k=0;k<dim;k++)
 			for(unsigned int l=k;l<dim;l++)
@@ -996,18 +996,21 @@ namespace HMM
 					for(unsigned int l=k;l<dim;l++)
 						avg_upd_strain_tensor[k][l] /= quadrature_formula.size();
 
+				// For debug...
 				std::cout << " Total Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[0][0] << " \t" << local_quadrature_points_history[0].new_strain[0][1] << " \t" << local_quadrature_points_history[0].new_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[1][0] << " \t" << local_quadrature_points_history[0].new_strain[1][1] << " \t" << local_quadrature_points_history[0].new_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[2][0] << " \t" << local_quadrature_points_history[0].new_strain[2][1] << " \t" << local_quadrature_points_history[0].new_strain[2][2] << std::endl;
 				std::cout << std::endl;
 
+				// For debug...
 				std::cout << " Update Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[0][0] << " \t" << local_quadrature_points_history[0].upd_strain[0][1] << " \t" << local_quadrature_points_history[0].upd_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[1][0] << " \t" << local_quadrature_points_history[0].upd_strain[1][1] << " \t" << local_quadrature_points_history[0].upd_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[2][0] << " \t" << local_quadrature_points_history[0].upd_strain[2][1] << " \t" << local_quadrature_points_history[0].upd_strain[2][2] << std::endl;
 				std::cout << std::endl;
 
+				// For debug...
 				std::cout << " Avg Update Strain Tensor " << std::endl;
 				std::cout << avg_upd_strain_tensor[0][0] << " \t" << avg_upd_strain_tensor[0][1] << " \t" << avg_upd_strain_tensor[0][2] << std::endl;
 				std::cout << avg_upd_strain_tensor[1][0] << " \t" << avg_upd_strain_tensor[1][1] << " \t" << avg_upd_strain_tensor[1][2] << std::endl;
@@ -1164,6 +1167,7 @@ namespace HMM
 					= rotated_upd_strain;*/
 				}
 
+				// For debug...
 				std::cout << " Total Stress Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[0][0] << " \t" << local_quadrature_points_history[0].new_stress[0][1] << " \t" << local_quadrature_points_history[0].new_stress[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[1][0] << " \t" << local_quadrature_points_history[0].new_stress[1][1] << " \t" << local_quadrature_points_history[0].new_stress[1][2] << std::endl;
@@ -2591,7 +2595,7 @@ namespace HMM
 		void do_timestep (FEProblem<dim> &fe_problem);
 		void solve_timestep (FEProblem<dim> &fe_problem);
 
-		void update_stiffness_with_molecular_dynamics (bool updated_stiffnesses);
+		void update_stiffness_with_molecular_dynamics ();
 
 		MPI_Comm 							world_communicator;
 		const int 							n_world_processes;
@@ -2621,6 +2625,7 @@ namespace HMM
 		double              				end_time;
 		int        							timestep_no;
 		int        							newtonstep_no;
+		bool 								updated_stiffnesses;
 
 		unsigned int						nrepl;
 
@@ -2660,7 +2665,7 @@ namespace HMM
 
 
 	template <int dim>
-	void HMMProblem<dim>::update_stiffness_with_molecular_dynamics(bool updated_stiffnesses)
+	void HMMProblem<dim>::update_stiffness_with_molecular_dynamics()
 	{
 		//char prev_time_id[1024]; sprintf(prev_time_id, "%d-%d", timestep_no, newtonstep_no-1);
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
@@ -2729,6 +2734,7 @@ namespace HMM
 				  << " " << loc_stiffness[1][1][1][1]
 				  << " " << loc_stiffness[2][2][2][2] << " " << std::endl;
 
+			// For debug...
 			hcout << " Old Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
 			hcout << loc_stiffness[0][0][0][0] << " \t" << loc_stiffness[0][0][1][1] << " \t" << loc_stiffness[0][0][2][2] << std::endl;
 			hcout << loc_stiffness[1][1][0][0] << " \t" << loc_stiffness[1][1][1][1] << " \t" << loc_stiffness[1][1][2][2] << std::endl;
@@ -2741,6 +2747,7 @@ namespace HMM
 		// the number of quadrature points to update, because if the number of points is smaller than
 		// the number of batches predefined initially part of the lammps allocated processors remain idle...
 		hcout << "        " << "...dispatching the MD runs on batch of processes..." << std::endl;
+		hcout << "        " << "...cells and replicas completed: " << std::flush;
 		for (int c=0; c<ncupd; ++c)
 		{
 			for(unsigned int repl=1;repl<nrepl+1;repl++)
@@ -2781,12 +2788,14 @@ namespace HMM
 							repl);
 					if(this_lammps_batch_process == 0)
 					{
+						std::cout << " \t" << cell_id[c] <<"-"<< repl << " \t" << std::flush;
 						sprintf(filename, "%s/last.%s.PE_%d.stiff", macrostatelocout, cell_id[c], repl);
 						write_tensor<dim>(filename, loc_rep_stiffness);
 					}
 				}
 			}
 		}
+		hcout << std::endl;
 
 		MPI_Barrier(world_communicator);
 
@@ -2863,12 +2872,14 @@ namespace HMM
 							<< " " << loc_stiffness[1][1][1][1]
 							<< " " << loc_stiffness[2][2][2][2] << " " << std::endl;
 
+					// For debug...
 					hcout << " New Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
 					hcout << loc_stiffness[0][0][0][0] << " \t" << loc_stiffness[0][0][1][1] << " \t" << loc_stiffness[0][0][2][2] << std::endl;
 					hcout << loc_stiffness[1][1][0][0] << " \t" << loc_stiffness[1][1][1][1] << " \t" << loc_stiffness[1][1][2][2] << std::endl;
 					hcout << loc_stiffness[2][2][0][0] << " \t" << loc_stiffness[2][2][1][1] << " \t" << loc_stiffness[2][2][2][2] << std::endl;
 					hcout << std::endl;
 
+					// For debug...
 					// Cleaning the stiffness tensor to remove negative diagonal terms and shear coupling terms...
 					for(unsigned int k=0;k<dim;k++)
 						for(unsigned int l=k;l<dim;l++)
@@ -2911,8 +2922,6 @@ namespace HMM
 	{
 		double previous_res;
 
-		bool updated_stiffnesses;
-
 		do
 		{
 			hcout << "  Initial assembling FE system..." << std::flush;
@@ -2938,7 +2947,7 @@ namespace HMM
 
 				hcout << "Have some stiffnesses been updated in this group of iterations? " << updated_stiffnesses << std::endl;
 
-				if (!updated_stiffnesses) update_stiffness_with_molecular_dynamics(updated_stiffnesses);
+				if (!updated_stiffnesses) update_stiffness_with_molecular_dynamics();
 				MPI_Barrier(world_communicator);
 
 				if(dealii_pcolor==0) fe_problem.update_stress_quadrature_point_history
@@ -3230,7 +3239,7 @@ namespace HMM
 	void HMMProblem<dim>::run ()
 	{
 		// Current machine number of processes per node
-		machine_ppn=28;
+		machine_ppn=16;
 
 		// Number of replicas in MD-ensemble
 		nrepl=1;
