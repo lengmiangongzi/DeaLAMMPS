@@ -343,6 +343,11 @@ namespace HMM
 				sprintf(vcoef, "C%d%dall", k+1, l+1);
 				tmp[k][l] = *((double *) lammps_extract_variable(lmp,vcoef,NULL))*1.0e+09;
 			}
+		std::cout << " Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
+		std::cout << tmp[0][0] << " \t" << tmp[0][1] << " \t" << tmp[0][2] << std::endl;
+		std::cout << tmp[1][0] << " \t" << tmp[1][1] << " \t" << tmp[1][2] << std::endl;
+		std::cout << tmp[2][0] << " \t" << tmp[2][1] << " \t" << tmp[2][2] << std::endl;
+		std::cout << std::endl;
 
 		// Write test... (on the data returned by lammps)
 
@@ -511,7 +516,7 @@ namespace HMM
 		// is nts > 1000 * strain so that v_load < v_sound...
 		// Declaration of run parameters
 		double dts = 2.0; // timestep length in fs
-		int nts = 2000; // number of timesteps
+		int nts = 1000; // number of timesteps
 		// Temperature
 		double tempt = 200.0;
 
@@ -953,6 +958,8 @@ namespace HMM
 				cell != dof_handler.end(); ++cell)
 			if (cell->is_locally_owned())
 			{
+				SymmetricTensor<2,dim> avg_upd_strain_tensor;
+
 				PointHistory<dim> *local_quadrature_points_history
 				= reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
 				Assert (local_quadrature_points_history >=
@@ -967,6 +974,8 @@ namespace HMM
 
 				for (unsigned int q=0; q<quadrature_formula.size(); ++q)
 					local_quadrature_points_history[q].to_be_updated = false;
+
+				avg_upd_strain_tensor = 0.;
 
 				for (unsigned int q=0; q<quadrature_formula.size(); ++q)
 				{
@@ -986,53 +995,44 @@ namespace HMM
 					local_quadrature_points_history[q].upd_strain +=
 							get_strain (displacement_update_grads[q]);
 
-					//if ((cell->active_cell_index() < 95) && (cell->active_cell_index() > 90) && (newtonstep_no > 0)) // For debug...
-					//if (false) // For debug...
-					if (newtonstep_no > 0)
-						for(unsigned int k=0;k<dim;k++){
-							for(unsigned int l=k;l<dim;l++){
-								if (fabs(local_quadrature_points_history[q].upd_strain[k][l]) > strain_perturbation
-										&& local_quadrature_points_history[q].to_be_updated == false){
-									std::cout << "           "
-											<< " cell "<< cell->active_cell_index() << " QP " << q
-											<< " strain component " << k << l
-											<< " value " << local_quadrature_points_history[q].upd_strain[k][l] << std::endl;
+					for(unsigned int k=0;k<dim;k++)
+						for(unsigned int l=k;l<dim;l++)
+							avg_upd_strain_tensor[k][l] += local_quadrature_points_history[q].upd_strain[k][l];
+				}
 
-									for (unsigned int qc=0; qc<quadrature_formula.size(); ++qc)
-										local_quadrature_points_history[qc].to_be_updated = true;
-								}
+				for(unsigned int k=0;k<dim;k++)
+					for(unsigned int l=k;l<dim;l++)
+						avg_upd_strain_tensor[k][l] /= quadrature_formula.size();
+
+				std::cout << " Strain Tensor " << std::endl;
+				std::cout << avg_upd_strain_tensor[0][0] << " \t" << avg_upd_strain_tensor[0][1] << " \t" << avg_upd_strain_tensor[0][2] << std::endl;
+				std::cout << avg_upd_strain_tensor[1][0] << " \t" << avg_upd_strain_tensor[1][1] << " \t" << avg_upd_strain_tensor[1][2] << std::endl;
+				std::cout << avg_upd_strain_tensor[2][0] << " \t" << avg_upd_strain_tensor[2][1] << " \t" << avg_upd_strain_tensor[2][2] << std::endl;
+				std::cout << std::endl;
+
+				//if ((cell->active_cell_index() < 95) && (cell->active_cell_index() > 90) && (newtonstep_no > 0)) // For debug...
+				//if (false) // For debug...
+				if (newtonstep_no > 0)
+					for(unsigned int k=0;k<dim;k++)
+						for(unsigned int l=k;l<dim;l++)
+							if (fabs(avg_upd_strain_tensor[k][l]) > strain_perturbation){
+								std::cout << "           "
+										<< " cell "<< cell->active_cell_index()
+										<< " strain component " << k << l
+										<< " value " << avg_upd_strain_tensor[k][l] << std::endl;
+
+								for (unsigned int qc=0; qc<quadrature_formula.size(); ++qc)
+									local_quadrature_points_history[qc].to_be_updated = true;
+
+								// Write strains since last update in a file named ./macrostate_storage/last.cellid-qid.strain
+								char cell_id[1024]; sprintf(cell_id, "%d", cell->active_cell_index());
+								char filename[1024];
+
+								sprintf(filename, "%s/last.%s.upstrain", macrostatelocout, cell_id);
+								write_tensor<dim>(filename, avg_upd_strain_tensor);
+
+								ofile << cell_id << std::endl;
 							}
-						}
-				}
-
-				// Write update_strain tensor in case the cell need to be updated.
-				// Using the average strain over the quadrature points
-				if (local_quadrature_points_history[0].to_be_updated){
-					// Write strains since last update in a file named ./macrostate_storage/last.cellid-qid.strain
-					char cell_id[1024]; sprintf(cell_id, "%d", cell->active_cell_index());
-					char filename[1024];
-
-					SymmetricTensor<2,dim> avg_upd_strain_tensor;
-
-					for(unsigned int k=0;k<dim;k++){
-						for(unsigned int l=k;l<dim;l++){
-							double average_qp = 0.;
-							for (unsigned int q=0;q<quadrature_formula.size();++q)
-								average_qp += local_quadrature_points_history[q].upd_strain[k][l];
-							average_qp /= quadrature_formula.size();
-							avg_upd_strain_tensor[k][l] = average_qp;
-						}
-					}
-
-					std::cout << avg_upd_strain_tensor[0][0] << " " << avg_upd_strain_tensor[0][1] << " " << avg_upd_strain_tensor[0][2] << std::endl;
-					std::cout << avg_upd_strain_tensor[1][0] << " " << avg_upd_strain_tensor[1][1] << " " << avg_upd_strain_tensor[1][2] << std::endl;
-					std::cout << avg_upd_strain_tensor[2][0] << " " << avg_upd_strain_tensor[2][1] << " " << avg_upd_strain_tensor[2][2] << std::endl;
-
-					sprintf(filename, "%s/last.%s.upstrain", macrostatelocout, cell_id);
-					write_tensor<dim>(filename, avg_upd_strain_tensor);
-
-					ofile << cell_id << std::endl;
-				}
 			}
 		ofile.close();
 		MPI_Barrier(FE_communicator);
@@ -3222,7 +3222,7 @@ namespace HMM
 		// Initialization of time variables
 		present_time = 0;
 		present_timestep = 1;
-		end_time = 500;
+		end_time = 100;
 		timestep_no = 0;
 
 		hcout << " Initiation of the Mesh...       " << std::endl;
