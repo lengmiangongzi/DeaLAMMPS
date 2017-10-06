@@ -3277,7 +3277,7 @@ namespace HMM
 		// Initialization of time variables
 		present_time = 0;
 		present_timestep = 1;
-		end_time = 100;
+		end_time = 300;
 		timestep_no = 0;
 
 		hcout << " Initiation of the Mesh...       " << std::endl;
