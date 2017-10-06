@@ -1161,6 +1161,12 @@ namespace HMM
 					= rotated_upd_strain;*/
 				}
 
+				std::cout << " Total Stress Tensor 0 " << std::endl;
+				std::cout << local_quadrature_points_history[0].new_stress[0][0] << " \t" << local_quadrature_points_history[0].new_stress[0][1] << " \t" << local_quadrature_points_history[0].new_stress[0][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].new_stress[1][0] << " \t" << local_quadrature_points_history[0].new_stress[1][1] << " \t" << local_quadrature_points_history[0].new_stress[1][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].new_stress[2][0] << " \t" << local_quadrature_points_history[0].new_stress[2][1] << " \t" << local_quadrature_points_history[0].new_stress[2][2] << std::endl;
+				std::cout << std::endl;
+
 				// Write update_strain tensor. Arbitrary use the data from the qp 0.
 				// Might be worth using data from the qp that exceeds most the threshold (norm?).
 				sprintf(filename, "%s/last.%s.upstrain", macrostatelocout, cell_id);
