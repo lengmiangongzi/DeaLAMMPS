@@ -2591,7 +2591,7 @@ namespace HMM
 		void do_timestep (FEProblem<dim> &fe_problem);
 		void solve_timestep (FEProblem<dim> &fe_problem);
 
-		void update_stiffness_with_molecular_dynamics ();
+		void update_stiffness_with_molecular_dynamics (bool updated_stiffnesses);
 
 		MPI_Comm 							world_communicator;
 		const int 							n_world_processes;
@@ -2660,7 +2660,7 @@ namespace HMM
 
 
 	template <int dim>
-	void HMMProblem<dim>::update_stiffness_with_molecular_dynamics()
+	void HMMProblem<dim>::update_stiffness_with_molecular_dynamics(bool updated_stiffnesses)
 	{
 		//char prev_time_id[1024]; sprintf(prev_time_id, "%d-%d", timestep_no, newtonstep_no-1);
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
@@ -2680,6 +2680,11 @@ namespace HMM
 			ifile.close();
 		}
 		else hcout << "Unable to open" << filenamelist << " to read it" << std::endl;
+
+		// Flag to know if some local cells stiffness are updated
+		if (ncupd>0) updated_stiffnesses = true;
+
+		hcout << "Are some stiffnesses updated in that call to update_stiffness_with_molecular_dynamics? " << updated_stiffnesses << std::endl;
 
 		// Create list of quadid
 		char **cell_id = new char *[ncupd];
@@ -2906,6 +2911,8 @@ namespace HMM
 	{
 		double previous_res;
 
+		bool updated_stiffnesses;
+
 		do
 		{
 			hcout << "  Initial assembling FE system..." << std::flush;
@@ -2913,6 +2920,8 @@ namespace HMM
 			hcout << "  Initial residual: "
 					<< previous_res
 					<< std::endl;
+
+			updated_stiffnesses = false;
 
 			for (unsigned int inner_iteration=0; inner_iteration<3; ++inner_iteration)
 			{
@@ -2927,7 +2936,9 @@ namespace HMM
 						(fe_problem.newton_update, timestep_no, newtonstep_no);
 				MPI_Barrier(world_communicator);
 
-				update_stiffness_with_molecular_dynamics();
+				hcout << "Have some stiffnesses been updated in this group of iterations? " << updated_stiffnesses << std::endl;
+
+				if (!updated_stiffnesses) update_stiffness_with_molecular_dynamics(updated_stiffnesses);
 				MPI_Barrier(world_communicator);
 
 				if(dealii_pcolor==0) fe_problem.update_stress_quadrature_point_history
@@ -2944,7 +2955,7 @@ namespace HMM
 						<< previous_res
 						<< std::endl;
 			}
-		} while (previous_res>1e-3);
+		} while (previous_res>1e-3 || updated_stiffnesses);
 	}
 
 
