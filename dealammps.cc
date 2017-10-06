@@ -1014,17 +1014,20 @@ namespace HMM
 				std::cout << avg_upd_strain_tensor[2][0] << " \t" << avg_upd_strain_tensor[2][1] << " \t" << avg_upd_strain_tensor[2][2] << std::endl;
 				std::cout << std::endl;
 
+				bool cell_to_be_updated = false;
 				//if ((cell->active_cell_index() < 95) && (cell->active_cell_index() > 90) && (newtonstep_no > 0)) // For debug...
-				//if (false) // For debug...
+				//if (false)
 				if (newtonstep_no > 0)
 					for(unsigned int k=0;k<dim;k++)
 						for(unsigned int l=k;l<dim;l++)
-							if (fabs(avg_upd_strain_tensor[k][l]) > strain_perturbation){
+							if (fabs(avg_upd_strain_tensor[k][l]) > strain_perturbation
+									&& cell_to_be_updated == false){
 								std::cout << "           "
 										<< " cell "<< cell->active_cell_index()
 										<< " strain component " << k << l
 										<< " value " << avg_upd_strain_tensor[k][l] << std::endl;
 
+								cell_to_be_updated = true;
 								for (unsigned int qc=0; qc<quadrature_formula.size(); ++qc)
 									local_quadrature_points_history[qc].to_be_updated = true;
 
@@ -2860,6 +2863,16 @@ namespace HMM
 					hcout << loc_stiffness[1][1][0][0] << " \t" << loc_stiffness[1][1][1][1] << " \t" << loc_stiffness[1][1][2][2] << std::endl;
 					hcout << loc_stiffness[2][2][0][0] << " \t" << loc_stiffness[2][2][1][1] << " \t" << loc_stiffness[2][2][2][2] << std::endl;
 					hcout << std::endl;
+
+					// Cleaning the stiffness tensor to remove negative diagonal terms and shear coupling terms...
+					for(unsigned int k=0;k<dim;k++)
+						for(unsigned int l=k;l<dim;l++)
+							for(unsigned int m=0;m<dim;m++)
+								for(unsigned int n=m;n<dim;n++)
+									if(!((k==l && m==n) || (k==m && l==n))){
+										loc_stiffness[k][l][m][n] *= 1.0; // correction -> *= 0.0
+									}
+									else if(loc_stiffness[k][l][m][n]<0.0) loc_stiffness[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
 					sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id[c]);
 					write_tensor<dim>(filename, loc_stiffness);
