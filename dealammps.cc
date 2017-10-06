@@ -1016,7 +1016,7 @@ namespace HMM
 
 				bool cell_to_be_updated = false;
 				//if ((cell->active_cell_index() < 95) && (cell->active_cell_index() > 90) && (newtonstep_no > 0)) // For debug...
-				//if (false)
+				//if (false) // For debug...
 				if (newtonstep_no > 0)
 					for(unsigned int k=0;k<dim;k++)
 						for(unsigned int l=k;l<dim;l++)
@@ -2870,7 +2870,7 @@ namespace HMM
 							for(unsigned int m=0;m<dim;m++)
 								for(unsigned int n=m;n<dim;n++)
 									if(!((k==l && m==n) || (k==m && l==n))){
-										loc_stiffness[k][l][m][n] *= 1.0; // correction -> *= 0.0
+										loc_stiffness[k][l][m][n] *= 0.0; // correction -> *= 0.0
 									}
 									else if(loc_stiffness[k][l][m][n]<0.0) loc_stiffness[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
