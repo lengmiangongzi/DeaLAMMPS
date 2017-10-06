@@ -2886,7 +2886,7 @@ namespace HMM
 							for(unsigned int m=0;m<dim;m++)
 								for(unsigned int n=m;n<dim;n++)
 									if(!((k==l && m==n) || (k==m && l==n))){
-										loc_stiffness[k][l][m][n] *= 0.0; // correction -> *= 0.0
+										loc_stiffness[k][l][m][n] *= 1.0; // correction -> *= 0.0
 									}
 									else if(loc_stiffness[k][l][m][n]<0.0) loc_stiffness[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
