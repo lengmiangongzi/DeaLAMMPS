@@ -295,9 +295,6 @@ namespace HMM
 	void
 	lammps_homogenization (void *lmp, char *location, SymmetricTensor<2,dim>& stresses, SymmetricTensor<4,dim>& stiffnesses, int flinit)
 	{
-		int me;
-		MPI_Comm_rank(MPI_COMM_WORLD, &me);
-
 		SymmetricTensor<2,2*dim> tmp;
 
 		char cfile[1024];
@@ -343,11 +340,6 @@ namespace HMM
 				sprintf(vcoef, "C%d%dall", k+1, l+1);
 				tmp[k][l] = *((double *) lammps_extract_variable(lmp,vcoef,NULL))*1.0e+09;
 			}
-		std::cout << " Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
-		std::cout << tmp[0][0] << " \t" << tmp[0][1] << " \t" << tmp[0][2] << std::endl;
-		std::cout << tmp[1][0] << " \t" << tmp[1][1] << " \t" << tmp[1][2] << std::endl;
-		std::cout << tmp[2][0] << " \t" << tmp[2][1] << " \t" << tmp[2][2] << std::endl;
-		std::cout << std::endl;
 
 		// Write test... (on the data returned by lammps)
 
@@ -1004,7 +996,19 @@ namespace HMM
 					for(unsigned int l=k;l<dim;l++)
 						avg_upd_strain_tensor[k][l] /= quadrature_formula.size();
 
-				std::cout << " Strain Tensor " << std::endl;
+				std::cout << " Total Strain Tensor 0 " << std::endl;
+				std::cout << local_quadrature_points_history[0].new_strain[0][0] << " \t" << local_quadrature_points_history[0].new_strain[0][1] << " \t" << local_quadrature_points_history[0].new_strain[0][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].new_strain[1][0] << " \t" << local_quadrature_points_history[0].new_strain[1][1] << " \t" << local_quadrature_points_history[0].new_strain[1][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].new_strain[2][0] << " \t" << local_quadrature_points_history[0].new_strain[2][1] << " \t" << local_quadrature_points_history[0].new_strain[2][2] << std::endl;
+				std::cout << std::endl;
+
+				std::cout << " Update Strain Tensor 0 " << std::endl;
+				std::cout << local_quadrature_points_history[0].upd_strain[0][0] << " \t" << local_quadrature_points_history[0].upd_strain[0][1] << " \t" << local_quadrature_points_history[0].upd_strain[0][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].upd_strain[1][0] << " \t" << local_quadrature_points_history[0].upd_strain[1][1] << " \t" << local_quadrature_points_history[0].upd_strain[1][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].upd_strain[2][0] << " \t" << local_quadrature_points_history[0].upd_strain[2][1] << " \t" << local_quadrature_points_history[0].upd_strain[2][2] << std::endl;
+				std::cout << std::endl;
+
+				std::cout << " Avg Update Strain Tensor " << std::endl;
 				std::cout << avg_upd_strain_tensor[0][0] << " \t" << avg_upd_strain_tensor[0][1] << " \t" << avg_upd_strain_tensor[0][2] << std::endl;
 				std::cout << avg_upd_strain_tensor[1][0] << " \t" << avg_upd_strain_tensor[1][1] << " \t" << avg_upd_strain_tensor[1][2] << std::endl;
 				std::cout << avg_upd_strain_tensor[2][0] << " \t" << avg_upd_strain_tensor[2][1] << " \t" << avg_upd_strain_tensor[2][2] << std::endl;
@@ -2710,6 +2714,12 @@ namespace HMM
 				  << "Old Stiffnesses: "<< loc_stiffness[0][0][0][0]
 				  << " " << loc_stiffness[1][1][1][1]
 				  << " " << loc_stiffness[2][2][2][2] << " " << std::endl;
+
+			hcout << " Old Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
+			hcout << loc_stiffness[0][0][0][0] << " \t" << loc_stiffness[0][0][1][1] << " \t" << loc_stiffness[0][0][2][2] << std::endl;
+			hcout << loc_stiffness[1][1][0][0] << " \t" << loc_stiffness[1][1][1][1] << " \t" << loc_stiffness[1][1][2][2] << std::endl;
+			hcout << loc_stiffness[2][2][0][0] << " \t" << loc_stiffness[2][2][1][1] << " \t" << loc_stiffness[2][2][2][2] << std::endl;
+			hcout << std::endl;
 		}
 		MPI_Barrier(world_communicator);
 
@@ -2838,6 +2848,12 @@ namespace HMM
 							<< " " << "Stiffnesses: " << loc_stiffness[0][0][0][0]
 							<< " " << loc_stiffness[1][1][1][1]
 							<< " " << loc_stiffness[2][2][2][2] << " " << std::endl;
+
+					hcout << " New Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
+					hcout << loc_stiffness[0][0][0][0] << " \t" << loc_stiffness[0][0][1][1] << " \t" << loc_stiffness[0][0][2][2] << std::endl;
+					hcout << loc_stiffness[1][1][0][0] << " \t" << loc_stiffness[1][1][1][1] << " \t" << loc_stiffness[1][1][2][2] << std::endl;
+					hcout << loc_stiffness[2][2][0][0] << " \t" << loc_stiffness[2][2][1][1] << " \t" << loc_stiffness[2][2][2][2] << std::endl;
+					hcout << std::endl;
 
 					sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id[c]);
 					write_tensor<dim>(filename, loc_stiffness);
