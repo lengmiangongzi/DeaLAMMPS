@@ -506,13 +506,24 @@ namespace HMM
 			char* logloc,
 		    unsigned int repl)
 	{
-		double strain_nrm = strain.norm();
+		int me;
+		MPI_Comm_rank(comm_lammps, &me);
+
 		// v_sound in PE is 2000m/s, since l0 = 8nm, with dts = 2.0fs, the condition
 		// is nts > 1000 * strain so that v_load < v_sound...
 		// Declaration of run parameters
-		double dts = 2.0; // timestep length in fs
-		int min_nts = 8.0e-9 * strain_nrm / (dts*1.0e-15*2000);
-		int nts = std::max(1000,min_nts); // number of timesteps
+		// timestep length in fs
+		double dts = 2.0;
+		// number of timesteps
+		double strain_nrm = strain.norm();
+		int min_nts = std::ceil(8.0e-9 * strain_nrm / (dts*1.0e-15*2000));
+		int std_nts = 1000;
+		int nts = std::max(std_nts,min_nts);
+
+		if (me == 0 && nts>1000) std::cout << "               "
+							<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
+							<< "   !! nts=1000 wasn't enough !!       " << std::endl;
+
 		// Temperature
 		double tempt = 200.0;
 
@@ -525,9 +536,6 @@ namespace HMM
 		sprintf(mdstate, "PE_%d.bin", repl);
 		char initdata[1024];
 		sprintf(initdata, "init.%s", mdstate);
-
-		int me;
-		MPI_Comm_rank(comm_lammps, &me);
 
 		char replogloc[1024];
 		sprintf(replogloc, "%s/R%d", logloc, repl);
