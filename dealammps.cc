@@ -306,6 +306,8 @@ namespace HMM
 		// Set sampling and straining time-lengths
 		sprintf(cline, "variable nssample0 equal 200"); lammps_command(lmp,cline);
 		sprintf(cline, "variable nssample  equal 200"); lammps_command(lmp,cline);
+		// For v_sound_PE = 2000 m/s, l_box=8nm, strain_perturbation=0.005, and dts=2.0fs
+		// the min number of straining steps is 10
 		sprintf(cline, "variable nsstrain  equal 200"); lammps_command(lmp,cline);
 
 		// Set strain perturbation amplitude
@@ -504,11 +506,13 @@ namespace HMM
 			char* logloc,
 		    unsigned int repl)
 	{
-		// v_sound in PE is 2000m/s, since l0 = 4nm, with dts = 2.0fs, the condition
+		double strain_nrm = strain.norm();
+		// v_sound in PE is 2000m/s, since l0 = 8nm, with dts = 2.0fs, the condition
 		// is nts > 1000 * strain so that v_load < v_sound...
 		// Declaration of run parameters
 		double dts = 2.0; // timestep length in fs
-		int nts = 1000; // number of timesteps
+		int min_nts = 8.0e-9 * strain_nrm / (dts*1.0e-15*2000);
+		int nts = std::max(1000,min_nts); // number of timesteps
 		// Temperature
 		double tempt = 200.0;
 
@@ -939,7 +943,7 @@ namespace HMM
 		displacement_update_grads (quadrature_formula.size(),
 				std::vector<Tensor<1,dim> >(dim));
 
-		double strain_perturbation = 0.01;
+		double strain_perturbation = 0.02;
 
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
 
@@ -997,25 +1001,25 @@ namespace HMM
 						avg_upd_strain_tensor[k][l] /= quadrature_formula.size();
 
 				// For debug...
-				std::cout << " Total Strain Tensor 0 " << std::endl;
+				/*std::cout << " Total Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[0][0] << " \t" << local_quadrature_points_history[0].new_strain[0][1] << " \t" << local_quadrature_points_history[0].new_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[1][0] << " \t" << local_quadrature_points_history[0].new_strain[1][1] << " \t" << local_quadrature_points_history[0].new_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[2][0] << " \t" << local_quadrature_points_history[0].new_strain[2][1] << " \t" << local_quadrature_points_history[0].new_strain[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				// For debug...
-				std::cout << " Update Strain Tensor 0 " << std::endl;
+				/*std::cout << " Update Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[0][0] << " \t" << local_quadrature_points_history[0].upd_strain[0][1] << " \t" << local_quadrature_points_history[0].upd_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[1][0] << " \t" << local_quadrature_points_history[0].upd_strain[1][1] << " \t" << local_quadrature_points_history[0].upd_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[2][0] << " \t" << local_quadrature_points_history[0].upd_strain[2][1] << " \t" << local_quadrature_points_history[0].upd_strain[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				// For debug...
-				std::cout << " Avg Update Strain Tensor " << std::endl;
+				/*std::cout << " Avg Update Strain Tensor " << std::endl;
 				std::cout << avg_upd_strain_tensor[0][0] << " \t" << avg_upd_strain_tensor[0][1] << " \t" << avg_upd_strain_tensor[0][2] << std::endl;
 				std::cout << avg_upd_strain_tensor[1][0] << " \t" << avg_upd_strain_tensor[1][1] << " \t" << avg_upd_strain_tensor[1][2] << std::endl;
 				std::cout << avg_upd_strain_tensor[2][0] << " \t" << avg_upd_strain_tensor[2][1] << " \t" << avg_upd_strain_tensor[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				bool cell_to_be_updated = false;
 				//if ((cell->active_cell_index() < 95) && (cell->active_cell_index() > 90) && (newtonstep_no > 0)) // For debug...
@@ -1168,11 +1172,11 @@ namespace HMM
 				}
 
 				// For debug...
-				std::cout << " Total Stress Tensor 0 " << std::endl;
+				/*std::cout << " Total Stress Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[0][0] << " \t" << local_quadrature_points_history[0].new_stress[0][1] << " \t" << local_quadrature_points_history[0].new_stress[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[1][0] << " \t" << local_quadrature_points_history[0].new_stress[1][1] << " \t" << local_quadrature_points_history[0].new_stress[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[2][0] << " \t" << local_quadrature_points_history[0].new_stress[2][1] << " \t" << local_quadrature_points_history[0].new_stress[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				// Write update_strain tensor. Arbitrary use the data from the qp 0.
 				// Might be worth using data from the qp that exceeds most the threshold (norm?).
@@ -2689,7 +2693,7 @@ namespace HMM
 		// Flag to know if some local cells stiffness are updated
 		if (ncupd>0) updated_stiffnesses = true;
 
-		hcout << "Are some stiffnesses updated in that call to update_stiffness_with_molecular_dynamics? " << updated_stiffnesses << std::endl;
+		hcout << "        " << "...are some stiffnesses updated in that call to update_stiffness_with_molecular_dynamics? " << updated_stiffnesses << std::endl;
 
 		// Create list of quadid
 		char **cell_id = new char *[ncupd];
@@ -2735,11 +2739,11 @@ namespace HMM
 				  << " " << loc_stiffness[2][2][2][2] << " " << std::endl;
 
 			// For debug...
-			hcout << " Old Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
+			/*hcout << " Old Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
 			hcout << loc_stiffness[0][0][0][0] << " \t" << loc_stiffness[0][0][1][1] << " \t" << loc_stiffness[0][0][2][2] << std::endl;
 			hcout << loc_stiffness[1][1][0][0] << " \t" << loc_stiffness[1][1][1][1] << " \t" << loc_stiffness[1][1][2][2] << std::endl;
 			hcout << loc_stiffness[2][2][0][0] << " \t" << loc_stiffness[2][2][1][1] << " \t" << loc_stiffness[2][2][2][2] << std::endl;
-			hcout << std::endl;
+			hcout << std::endl;*/
 		}
 		MPI_Barrier(world_communicator);
 
@@ -2873,11 +2877,11 @@ namespace HMM
 							<< " " << loc_stiffness[2][2][2][2] << " " << std::endl;
 
 					// For debug...
-					hcout << " New Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
+					/*std:: << " New Voigt Stiffness Tensor (3x3 first terms)" << std::endl;
 					hcout << loc_stiffness[0][0][0][0] << " \t" << loc_stiffness[0][0][1][1] << " \t" << loc_stiffness[0][0][2][2] << std::endl;
 					hcout << loc_stiffness[1][1][0][0] << " \t" << loc_stiffness[1][1][1][1] << " \t" << loc_stiffness[1][1][2][2] << std::endl;
 					hcout << loc_stiffness[2][2][0][0] << " \t" << loc_stiffness[2][2][1][1] << " \t" << loc_stiffness[2][2][2][2] << std::endl;
-					hcout << std::endl;
+					hcout << std::endl;*/
 
 					// For debug...
 					// Cleaning the stiffness tensor to remove negative diagonal terms and shear coupling terms...
@@ -2935,7 +2939,7 @@ namespace HMM
 			for (unsigned int inner_iteration=0; inner_iteration<3; ++inner_iteration)
 			{
 				++newtonstep_no;
-
+				hcout << "    Beginning of timestep: " << timestep_no << " - newton step: " << newtonstep_no << std::flush;
 				hcout << "    Solving FE system..." << std::flush;
 				if(dealii_pcolor==0) fe_problem.solve_linear_problem_CG();
 
@@ -2945,7 +2949,7 @@ namespace HMM
 						(fe_problem.newton_update, timestep_no, newtonstep_no);
 				MPI_Barrier(world_communicator);
 
-				hcout << "Have some stiffnesses been updated in this group of iterations? " << updated_stiffnesses << std::endl;
+				hcout << "    Have some stiffnesses been updated in this group of iterations? " << updated_stiffnesses << std::endl;
 
 				if (!updated_stiffnesses) update_stiffness_with_molecular_dynamics();
 				MPI_Barrier(world_communicator);
