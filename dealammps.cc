@@ -516,13 +516,13 @@ namespace HMM
 		double dts = 2.0;
 		// number of timesteps
 		double strain_nrm = strain.norm();
-		int min_nts = std::ceil(8.0e-9 * strain_nrm / (dts*1.0e-15*2000));
+		int min_nts = std::ceil((8.0e-9 * strain_nrm)/(dts*1.0e-15*2000));
 		int std_nts = 1000;
 		int nts = std::max(std_nts,min_nts);
 
-		if (me == 0 && nts>1000) std::cout << "               "
+		if (me == 0 && nts>std_nts) std::cout << "               "
 							<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-							<< "   !! nts=1000 wasn't enough !!       " << std::endl;
+							<< "   !! std_nts = " << std_nts <<" wasn't enough min_nts = " << min_nts << " !!       " << std::flush;
 
 		// Temperature
 		double tempt = 200.0;
