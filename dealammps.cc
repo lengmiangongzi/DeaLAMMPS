@@ -303,15 +303,26 @@ namespace HMM
 		sprintf(cline, "variable locbe string %s/%s", location, "ELASTIC");
 		lammps_command(lmp,cline);
 
+		// Timestep length in fs
+		double dts = 2.0;
+
+		// number of timesteps for straining
+		double strain_rate = 1.0e-4; // in fs^(-1)
+		double strain_nrm = 0.005;
+		int nsstrain = std::ceil(strain_nrm/(dts*strain_rate));
+
+		// number of timesteps for averaging
+		int nssample = 200;
+
 		// Set sampling and straining time-lengths
-		sprintf(cline, "variable nssample0 equal 200"); lammps_command(lmp,cline);
-		sprintf(cline, "variable nssample  equal 200"); lammps_command(lmp,cline);
+		sprintf(cline, "variable nssample0 equal %d", nssample); lammps_command(lmp,cline);
+		sprintf(cline, "variable nssample  equal %d", nssample); lammps_command(lmp,cline);
 		// For v_sound_PE = 2000 m/s, l_box=8nm, strain_perturbation=0.005, and dts=2.0fs
 		// the min number of straining steps is 10
-		sprintf(cline, "variable nsstrain  equal 200"); lammps_command(lmp,cline);
+		sprintf(cline, "variable nsstrain  equal %d", nsstrain); lammps_command(lmp,cline);
 
 		// Set strain perturbation amplitude
-		sprintf(cline, "variable up equal 5.0e-3"); lammps_command(lmp,cline);
+		sprintf(cline, "variable up equal %f", strain_nrm); lammps_command(lmp,cline);
 
 		// Set flag to define if stiffness is computed from initial or current stresses
 		sprintf(cline, "variable flinit equal %d", flinit); lammps_command(lmp,cline);
@@ -509,20 +520,23 @@ namespace HMM
 		int me;
 		MPI_Comm_rank(comm_lammps, &me);
 
-		// v_sound in PE is 2000m/s, since l0 = 8nm, with dts = 2.0fs, the condition
-		// is nts > 1000 * strain so that v_load < v_sound...
 		// Declaration of run parameters
 		// timestep length in fs
 		double dts = 2.0;
 		// number of timesteps
+		double strain_rate = 1.0e-4; // in fs^(-1)
 		double strain_nrm = strain.norm();
-		int min_nts = std::ceil((8.0e-9 * strain_nrm)/(dts*1.0e-15*2000));
+		int nts = std::ceil(strain_nrm/(dts*strain_rate));
+
+		// v_sound in PE is 2000m/s, since l0 = 8nm, with dts = 2.0fs, the condition
+		// is nts > 1000 * strain so that v_load < v_sound...
+		/*int min_nts = std::ceil((8.0e-9 * strain_nrm)/(dts*1.0e-15*2000));
 		int std_nts = 1000;
 		int nts = std::max(std_nts,min_nts);
 
 		if (me == 0 && nts>std_nts) std::cout << "               "
 							<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-							<< "   !! std_nts = " << std_nts <<" wasn't enough min_nts = " << min_nts << " !!       " << std::flush;
+							<< "   !! std_nts = " << std_nts <<" wasn't enough min_nts = " << min_nts << " !!       " << std::flush;*/
 
 		// Temperature
 		double tempt = 200.0;
@@ -2393,7 +2407,7 @@ namespace HMM
 			reps[0] = 1; reps[1] = 1; reps[2] = 1;
 			GridGenerator::subdivided_hyper_rectangle(triangulation, reps, pp1, pp2);
 
-			//triangulation.refine_global (3);
+			triangulation.refine_global (2);
 
 			sprintf(filename, "%s/mesh.tria", macrostatelocout);
 			std::ofstream oss(filename);
