@@ -307,9 +307,9 @@ namespace HMM
 		double dts = 2.0;
 
 		// number of timesteps for straining
-		double strain_rate = 1.0e-4; // in fs^(-1)
+		double strain_rate = 1.0e-5; // in fs^(-1)
 		double strain_nrm = 0.005;
-		int nsstrain = std::ceil(strain_nrm/(dts*strain_rate));
+		int nsstrain = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
 		// number of timesteps for averaging
 		int nssample = 200;
@@ -524,9 +524,9 @@ namespace HMM
 		// timestep length in fs
 		double dts = 2.0;
 		// number of timesteps
-		double strain_rate = 1.0e-4; // in fs^(-1)
+		double strain_rate = 1.0e-5; // in fs^(-1)
 		double strain_nrm = strain.norm();
-		int nts = std::ceil(strain_nrm/(dts*strain_rate));
+		int nts = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
 		// v_sound in PE is 2000m/s, since l0 = 8nm, with dts = 2.0fs, the condition
 		// is nts > 1000 * strain so that v_load < v_sound...
@@ -2407,7 +2407,7 @@ namespace HMM
 			reps[0] = 1; reps[1] = 1; reps[2] = 1;
 			GridGenerator::subdivided_hyper_rectangle(triangulation, reps, pp1, pp2);
 
-			triangulation.refine_global (2);
+			triangulation.refine_global (1);
 
 			sprintf(filename, "%s/mesh.tria", macrostatelocout);
 			std::ofstream oss(filename);
