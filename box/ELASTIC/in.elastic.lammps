@@ -235,4 +235,6 @@ print "Elastic Constant C56all = ${C56all} ${cunits}"
 #print "Poisson Ratio = ${poissonratio}"
 
 # read restart for the c++ wrapper to write it
+clear
+box tilt large
 read_restart ${loco}/restart.equil
