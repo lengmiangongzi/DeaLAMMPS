@@ -660,13 +660,13 @@ namespace HMM
 		sprintf(cfile, "%s/%s", location, "in.strain.lammps");
 		lammps_file(lmp,cfile);
 
+		// Save data to specific file for this quadrature point
+		// At the end of the homogenization the state after sampling the current stress is reread to prepare this write
+		sprintf(cline, "write_restart %s/%s", statelocout, straindata_last); lammps_command(lmp,cline);
 
 		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
 				<< "Saving state data...       " << std::endl;*/
-		// Save data to specific file for this quadrature point
-		sprintf(cline, "write_restart %s/%s", statelocout, straindata_last); lammps_command(lmp,cline);
-
 
 		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
@@ -680,6 +680,10 @@ namespace HMM
 			}
 		// Compute the secant stiffness tensor at the given stress/strain state
 		lammps_homogenization<dim>(lmp, location, stress, stiffness, 1);
+
+		// Save data to specific file for this quadrature point
+		// At the end of the homogenization the state after sampling the current stress is reread to prepare this write
+		//sprintf(cline, "write_restart %s/%s", statelocout, straindata_last); lammps_command(lmp,cline);
 
 		// close down LAMMPS
 		delete lmp;
@@ -757,7 +761,7 @@ namespace HMM
 		void make_grid ();
 		void setup_system ();
 		void restart_system (char* nanostatelocin, char* nanostatelocout, unsigned int nrepl);
-		void set_boundary_values (const double present_timestep);
+		void set_boundary_values (const double present_timestep, const int timestep_no);
 		double assemble_system ();
 		void solve_linear_problem_CG ();
 		void solve_linear_problem_BiCGStab ();
@@ -1222,9 +1226,9 @@ namespace HMM
 	// assemble_system() function
 	template <int dim>
 	void FEProblem<dim>::set_boundary_values
-	(const double present_timestep)
+	(const double present_timestep, const int timestep_no)
 	{
-		if (present_timestep < 151) velocity = +0.001;
+		if (timestep_no < 151) velocity = +0.001;
 		else velocity = -0.001;
 
 		FEValuesExtractors::Scalar x_component (dim-3);
@@ -3016,7 +3020,7 @@ namespace HMM
 
 		if(dealii_pcolor==0) fe_problem.incremental_displacement = 0;
 
-		if(dealii_pcolor==0) fe_problem.set_boundary_values (present_timestep);
+		if(dealii_pcolor==0) fe_problem.set_boundary_values (present_timestep, timestep_no);
 
 		if(dealii_pcolor==0) fe_problem.update_strain_quadrature_point_history (fe_problem.incremental_displacement, timestep_no, newtonstep_no, updated_stiffnesses);
 		MPI_Barrier(world_communicator);

@@ -233,3 +233,6 @@ print "Elastic Constant C56all = ${C56all} ${cunits}"
 #print "Shear Modulus 1 = ${shearmodulus1} ${cunits}"
 #print "Shear Modulus 2 = ${shearmodulus2} ${cunits}"
 #print "Poisson Ratio = ${poissonratio}"
+
+# read restart for the c++ wrapper to write it
+read_restart ${loco}/restart.equil
