@@ -307,7 +307,7 @@ namespace HMM
 		double dts = 2.0;
 
 		// number of timesteps for straining
-		double strain_rate = 1.0e-5; // in fs^(-1)
+		double strain_rate = 0.2e-4; // in fs^(-1)
 		double strain_nrm = 0.005;
 		int nsstrain = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
@@ -524,7 +524,7 @@ namespace HMM
 		// timestep length in fs
 		double dts = 2.0;
 		// number of timesteps
-		double strain_rate = 1.0e-5; // in fs^(-1)
+		double strain_rate = 0.2e-4; // in fs^(-1)
 		double strain_nrm = strain.norm();
 		int nts = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
@@ -965,7 +965,7 @@ namespace HMM
 		displacement_update_grads (quadrature_formula.size(),
 				std::vector<Tensor<1,dim> >(dim));
 
-		double strain_perturbation = 0.02;
+		double strain_perturbation = 0.05;
 
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
 
@@ -1224,7 +1224,8 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values
 	(const double present_timestep)
 	{
-		velocity = +0.001;
+		if (present_timestep < 151) velocity = +0.001;
+		else velocity = -0.001;
 
 		FEValuesExtractors::Scalar x_component (dim-3);
 		FEValuesExtractors::Scalar y_component (dim-2);
@@ -2407,7 +2408,7 @@ namespace HMM
 			reps[0] = 1; reps[1] = 1; reps[2] = 1;
 			GridGenerator::subdivided_hyper_rectangle(triangulation, reps, pp1, pp2);
 
-			triangulation.refine_global (1);
+			triangulation.refine_global (2);
 
 			sprintf(filename, "%s/mesh.tria", macrostatelocout);
 			std::ofstream oss(filename);
