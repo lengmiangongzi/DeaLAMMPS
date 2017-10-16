@@ -238,3 +238,4 @@ print "Elastic Constant C56all = ${C56all} ${cunits}"
 clear
 box tilt large
 read_restart ${loco}/restart.equil
+include ${locbe}/potential.mod.lammps
