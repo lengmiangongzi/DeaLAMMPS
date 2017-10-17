@@ -893,7 +893,7 @@ namespace HMM
 				for(unsigned int m=0;m<dim;m++)
 					for(unsigned int n=m;n<dim;n++)
 						if(!((k==l && m==n) || (k==m && l==n))){
-							stiffness_tensor[k][l][m][n] *= 1.0;
+							stiffness_tensor[k][l][m][n] *= 0.0;
 						}
 						else if(stiffness_tensor[k][l][m][n]<0.0) stiffness_tensor[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
