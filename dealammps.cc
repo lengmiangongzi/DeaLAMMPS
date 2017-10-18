@@ -94,10 +94,12 @@ namespace HMM
 	{
 		SymmetricTensor<2,dim> old_stress;
 		SymmetricTensor<2,dim> new_stress;
+		SymmetricTensor<2,dim> inc_stress;
 		SymmetricTensor<4,dim> old_stiff;
 		SymmetricTensor<4,dim> new_stiff;
 		SymmetricTensor<2,dim> old_strain;
 		SymmetricTensor<2,dim> new_strain;
+		SymmetricTensor<2,dim> inc_strain;
 		SymmetricTensor<2,dim> upd_strain;
 		bool to_be_updated;
 	};
@@ -679,7 +681,7 @@ namespace HMM
 				lammps_command(lmp,cline);
 			}
 		// Compute the secant stiffness tensor at the given stress/strain state
-		lammps_homogenization<dim>(lmp, location, stress, stiffness, 1);
+		lammps_homogenization<dim>(lmp, location, stress, stiffness, 0);
 
 		// Save data to specific file for this quadrature point
 		// At the end of the homogenization the state after sampling the current stress is reread to prepare this write
@@ -893,7 +895,7 @@ namespace HMM
 				for(unsigned int m=0;m<dim;m++)
 					for(unsigned int n=m;n<dim;n++)
 						if(!((k==l && m==n) || (k==m && l==n))){
-							stiffness_tensor[k][l][m][n] *= 0.0;
+							stiffness_tensor[k][l][m][n] *= 1.0;
 						}
 						else if(stiffness_tensor[k][l][m][n]<0.0) stiffness_tensor[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
@@ -1011,11 +1013,9 @@ namespace HMM
 							local_quadrature_points_history[q].new_stiff;
 
 					// Strain tensor update
-					local_quadrature_points_history[q].new_strain +=
-							get_strain (displacement_update_grads[q]);
-
-					local_quadrature_points_history[q].upd_strain +=
-							get_strain (displacement_update_grads[q]);
+					local_quadrature_points_history[q].inc_strain = get_strain (displacement_update_grads[q]);
+					local_quadrature_points_history[q].new_strain += local_quadrature_points_history[q].inc_strain;
+					local_quadrature_points_history[q].upd_strain += local_quadrature_points_history[q].inc_strain;
 
 					for(unsigned int k=0;k<dim;k++)
 						for(unsigned int l=k;l<dim;l++)
@@ -1161,6 +1161,12 @@ namespace HMM
 
 						local_quadrature_points_history[q].upd_strain = 0;
 					}
+
+					// Tangent stiffness computation of the new stress tensor and the stress increment tensor
+					local_quadrature_points_history[q].inc_stress =
+						local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].inc_strain;
+
+					local_quadrature_points_history[q].new_stress += local_quadrature_points_history[q].inc_stress;
 
 					// Secant stiffness computation of the new stress tensor
 					local_quadrature_points_history[q].new_stress =
@@ -1426,16 +1432,16 @@ namespace HMM
 
 				for (unsigned int i=0; i<dofs_per_cell; ++i)
 				{
-					const unsigned int
-					component_i = fe.system_to_component_index(i).first;
+					//const unsigned int
+					//component_i = fe.system_to_component_index(i).first;
 
 					for (unsigned int q_point=0; q_point<n_q_points; ++q_point)
 					{
 						const SymmetricTensor<2,dim> &new_stress
-						= local_quadrature_points_data[q_point].new_stress;
+						= local_quadrature_points_data[q_point].inc_stress;
 
-						cell_rhs(i) += (body_force_values[q_point](component_i) *
-								fe_values.shape_value (i,q_point)
+						cell_rhs(i) += (/*body_force_values[q_point](component_i) *
+								fe_values.shape_value (i,q_point)*/
 								-
 								new_stress *
 								get_strain (fe_values,i,q_point))
