@@ -896,7 +896,8 @@ namespace HMM
 				for(unsigned int m=0;m<dim;m++)
 					for(unsigned int n=m;n<dim;n++)
 						if(!((k==l && m==n) || (k==m && l==n))){
-							stiffness_tensor[k][l][m][n] *= 1.0;
+							std::cout << "       ... removal of shear coupling terms" << std::endl;
+							stiffness_tensor[k][l][m][n] *= 0.0;
 						}
 						else if(stiffness_tensor[k][l][m][n]<0.0) stiffness_tensor[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
@@ -1035,6 +1036,20 @@ namespace HMM
 				std::cout << local_quadrature_points_history[0].new_strain[0][0] << " \t" << local_quadrature_points_history[0].new_strain[0][1] << " \t" << local_quadrature_points_history[0].new_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[1][0] << " \t" << local_quadrature_points_history[0].new_strain[1][1] << " \t" << local_quadrature_points_history[0].new_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[2][0] << " \t" << local_quadrature_points_history[0].new_strain[2][1] << " \t" << local_quadrature_points_history[0].new_strain[2][2] << std::endl;
+				std::cout << std::endl;
+
+				// For debug...
+				std::cout << " Inc Strain Tensor 0 " << std::endl;
+				std::cout << local_quadrature_points_history[0].inc_strain[0][0] << " \t" << local_quadrature_points_history[0].inc_strain[0][1] << " \t" << local_quadrature_points_history[0].inc_strain[0][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].inc_strain[1][0] << " \t" << local_quadrature_points_history[0].inc_strain[1][1] << " \t" << local_quadrature_points_history[0].inc_strain[1][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].inc_strain[2][0] << " \t" << local_quadrature_points_history[0].inc_strain[2][1] << " \t" << local_quadrature_points_history[0].inc_strain[2][2] << std::endl;
+				std::cout << std::endl;
+
+				// For debug...
+				std::cout << " Newton Strain Tensor 0 " << std::endl;
+				std::cout << local_quadrature_points_history[0].newton_strain[0][0] << " \t" << local_quadrature_points_history[0].newton_strain[0][1] << " \t" << local_quadrature_points_history[0].newton_strain[0][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].newton_strain[1][0] << " \t" << local_quadrature_points_history[0].newton_strain[1][1] << " \t" << local_quadrature_points_history[0].newton_strain[1][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].newton_strain[2][0] << " \t" << local_quadrature_points_history[0].newton_strain[2][1] << " \t" << local_quadrature_points_history[0].newton_strain[2][2] << std::endl;
 				std::cout << std::endl;
 
 				// For debug...
@@ -1215,6 +1230,13 @@ namespace HMM
 				std::cout << local_quadrature_points_history[0].new_stress[0][0] << " \t" << local_quadrature_points_history[0].new_stress[0][1] << " \t" << local_quadrature_points_history[0].new_stress[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[1][0] << " \t" << local_quadrature_points_history[0].new_stress[1][1] << " \t" << local_quadrature_points_history[0].new_stress[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[2][0] << " \t" << local_quadrature_points_history[0].new_stress[2][1] << " \t" << local_quadrature_points_history[0].new_stress[2][2] << std::endl;
+				std::cout << std::endl;
+
+				// For debug...
+				std::cout << " Inc Stress Tensor 0 " << std::endl;
+				std::cout << local_quadrature_points_history[0].inc_stress[0][0] << " \t" << local_quadrature_points_history[0].inc_stress[0][1] << " \t" << local_quadrature_points_history[0].inc_stress[0][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].inc_stress[1][0] << " \t" << local_quadrature_points_history[0].inc_stress[1][1] << " \t" << local_quadrature_points_history[0].inc_stress[1][2] << std::endl;
+				std::cout << local_quadrature_points_history[0].inc_stress[2][0] << " \t" << local_quadrature_points_history[0].inc_stress[2][1] << " \t" << local_quadrature_points_history[0].inc_stress[2][2] << std::endl;
 				std::cout << std::endl;
 
 				// Write update_strain tensor. Arbitrary use the data from the qp 0.
@@ -2800,10 +2822,19 @@ namespace HMM
 
 				if (lammps_pcolor == (imdrun%n_lammps_batch))
 				{
+
 					SymmetricTensor<2,dim> loc_strain;
 					SymmetricTensor<2,dim> loc_stress;
 
 					char filename[1024];
+
+					// For debug...
+					/*SymmetricTensor<4,dim> prev_loc_rep_stiffness;
+					sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id[c]);
+					ifile.open (filename);
+					if (ifile.is_open()) ifile.close();
+					else sprintf(filename, "%s/last.stiff", macrostatelocout);
+					read_tensor<dim>(filename, prev_loc_rep_stiffness);*/
 
 					// Argument of the MD simulation
 					sprintf(filename, "%s/last.%s.upstrain", macrostatelocout, cell_id[c]);
@@ -2830,6 +2861,10 @@ namespace HMM
 							nanostatelocout,
 							nanologloc,
 							repl);
+
+					// For debug...
+					//loc_rep_stiffness = prev_loc_rep_stiffness;
+					//loc_rep_stiffness[1][1][1][1] *= -0.5;
 					if(this_lammps_batch_process == 0)
 					{
 						std::cout << " \t" << cell_id[c] <<"-"<< repl << " \t" << std::flush;
@@ -2844,7 +2879,7 @@ namespace HMM
 		MPI_Barrier(world_communicator);
 
 		// Verify the integrity of the stiffness tensor (constraint C_upd>stol*C_ini)
-		double stol = 0.001;
+		/*double stol = 0.001;
 
 		for (int c=0; c<ncupd; ++c)
 		{
@@ -2885,7 +2920,7 @@ namespace HMM
 			}
 		}
 
-		MPI_Barrier(world_communicator);
+		MPI_Barrier(world_communicator);*/
 
 		for (int c=0; c<ncupd; ++c)
 		{
@@ -2930,7 +2965,8 @@ namespace HMM
 							for(unsigned int m=0;m<dim;m++)
 								for(unsigned int n=m;n<dim;n++)
 									if(!((k==l && m==n) || (k==m && l==n))){
-										loc_stiffness[k][l][m][n] *= 1.0; // correction -> *= 0.0
+										std::cout << "       ... removal of shear coupling terms" << std::endl;
+										loc_stiffness[k][l][m][n] *= 0.0; // correction -> *= 0.0
 									}
 									else if(loc_stiffness[k][l][m][n]<0.0) loc_stiffness[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
@@ -2976,7 +3012,7 @@ namespace HMM
 
 			updated_stiffnesses = false;
 
-			for (unsigned int inner_iteration=0; inner_iteration<3; ++inner_iteration)
+			for (unsigned int inner_iteration=0; inner_iteration<2; ++inner_iteration)
 			{
 				++newtonstep_no;
 				hcout << "    Beginning of timestep: " << timestep_no << " - newton step: " << newtonstep_no << std::flush;
