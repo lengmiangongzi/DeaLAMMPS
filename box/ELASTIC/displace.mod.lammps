@@ -12,9 +12,9 @@ if "${dir} == 3" then &
 if "${dir} == 4" then &
    "variable len0 equal ${ly0}"
 if "${dir} == 5" then &
-   "variable len0 equal ${lz0}"
+   "variable len0 equal ${lx0}"
 if "${dir} == 6" then &
-   "variable len0 equal ${lz0}"
+   "variable len0 equal ${lx0}"
 
 variable ori string "neg"
 # Reset box and simulation parameters
