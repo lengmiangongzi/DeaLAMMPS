@@ -101,6 +101,7 @@ namespace HMM
 		SymmetricTensor<2,dim> new_strain;
 		SymmetricTensor<2,dim> inc_strain;
 		SymmetricTensor<2,dim> upd_strain;
+		SymmetricTensor<2,dim> newton_strain;
 		bool to_be_updated;
 	};
 
@@ -982,7 +983,7 @@ namespace HMM
 				cell != dof_handler.end(); ++cell)
 			if (cell->is_locally_owned())
 			{
-				SymmetricTensor<2,dim> avg_upd_strain_tensor;
+				SymmetricTensor<2,dim> newton_strain_tensor, avg_upd_strain_tensor;
 
 				PointHistory<dim> *local_quadrature_points_history
 				= reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
@@ -1012,10 +1013,13 @@ namespace HMM
 					local_quadrature_points_history[q].old_stiff =
 							local_quadrature_points_history[q].new_stiff;
 
+					if (newtonstep_no == 0) local_quadrature_points_history[q].inc_strain = 0.;
+
 					// Strain tensor update
-					local_quadrature_points_history[q].inc_strain = get_strain (displacement_update_grads[q]);
-					local_quadrature_points_history[q].new_strain += local_quadrature_points_history[q].inc_strain;
-					local_quadrature_points_history[q].upd_strain += local_quadrature_points_history[q].inc_strain;
+					local_quadrature_points_history[q].newton_strain = get_strain (displacement_update_grads[q]);
+					local_quadrature_points_history[q].inc_strain += local_quadrature_points_history[q].newton_strain;
+					local_quadrature_points_history[q].new_strain += local_quadrature_points_history[q].newton_strain;
+					local_quadrature_points_history[q].upd_strain += local_quadrature_points_history[q].newton_strain;
 
 					for(unsigned int k=0;k<dim;k++)
 						for(unsigned int l=k;l<dim;l++)
@@ -1027,11 +1031,11 @@ namespace HMM
 						avg_upd_strain_tensor[k][l] /= quadrature_formula.size();
 
 				// For debug...
-				/*std::cout << " Total Strain Tensor 0 " << std::endl;
+				std::cout << " Total Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[0][0] << " \t" << local_quadrature_points_history[0].new_strain[0][1] << " \t" << local_quadrature_points_history[0].new_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[1][0] << " \t" << local_quadrature_points_history[0].new_strain[1][1] << " \t" << local_quadrature_points_history[0].new_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[2][0] << " \t" << local_quadrature_points_history[0].new_strain[2][1] << " \t" << local_quadrature_points_history[0].new_strain[2][2] << std::endl;
-				std::cout << std::endl;*/
+				std::cout << std::endl;
 
 				// For debug...
 				/*std::cout << " Update Strain Tensor 0 " << std::endl;
@@ -1162,15 +1166,18 @@ namespace HMM
 						local_quadrature_points_history[q].upd_strain = 0;
 					}
 
-					// Tangent stiffness computation of the new stress tensor and the stress increment tensor
-					local_quadrature_points_history[q].inc_stress =
-						local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].inc_strain;
+					if (newtonstep_no == 0) local_quadrature_points_history[q].inc_stress = 0.;
 
-					local_quadrature_points_history[q].new_stress += local_quadrature_points_history[q].inc_stress;
+					// Tangent stiffness computation of the new stress tensor and the stress increment tensor
+					local_quadrature_points_history[q].inc_stress +=
+						local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
+
+					local_quadrature_points_history[q].new_stress +=
+						local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
 
 					// Secant stiffness computation of the new stress tensor
-					local_quadrature_points_history[q].new_stress =
-							local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].new_strain;
+					//local_quadrature_points_history[q].new_stress =
+					//		local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].new_strain;
 
 					// Apply rotation of the sample to the new state tensors.
 					// Only needed if the mesh is modified...
@@ -1204,11 +1211,11 @@ namespace HMM
 				}
 
 				// For debug...
-				/*std::cout << " Total Stress Tensor 0 " << std::endl;
+				std::cout << " Total Stress Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[0][0] << " \t" << local_quadrature_points_history[0].new_stress[0][1] << " \t" << local_quadrature_points_history[0].new_stress[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[1][0] << " \t" << local_quadrature_points_history[0].new_stress[1][1] << " \t" << local_quadrature_points_history[0].new_stress[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[2][0] << " \t" << local_quadrature_points_history[0].new_stress[2][1] << " \t" << local_quadrature_points_history[0].new_stress[2][2] << std::endl;
-				std::cout << std::endl;*/
+				std::cout << std::endl;
 
 				// Write update_strain tensor. Arbitrary use the data from the qp 0.
 				// Might be worth using data from the qp that exceeds most the threshold (norm?).
@@ -2997,7 +3004,7 @@ namespace HMM
 				// Share the value of previous_res in between processors
 				MPI_Bcast(&previous_res, 1, MPI_DOUBLE, root_dealii_process, world_communicator);
 
-				hcout << "  Residual: "
+				hcout << "    Residual: "
 						<< previous_res
 						<< std::endl;
 			}
