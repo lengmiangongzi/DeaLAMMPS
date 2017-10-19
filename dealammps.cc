@@ -846,8 +846,8 @@ namespace HMM
 		dcout (std::cout,(this_FE_process == 0)),
 		triangulation(FE_communicator),
 		dof_handler (triangulation),
-		fe (FE_Q<dim>(1), dim),
-		quadrature_formula (2),
+		fe (FE_Q<dim>(2), dim),
+		quadrature_formula (3),
 		macrostatelocin (mslocin),
 		macrostatelocout (mslocout),
 		macrostatelocres (mslocres),
@@ -1053,18 +1053,18 @@ namespace HMM
 				std::cout << std::endl;
 
 				// For debug...
-				/*std::cout << " Update Strain Tensor 0 " << std::endl;
+				std::cout << " Update Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[0][0] << " \t" << local_quadrature_points_history[0].upd_strain[0][1] << " \t" << local_quadrature_points_history[0].upd_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[1][0] << " \t" << local_quadrature_points_history[0].upd_strain[1][1] << " \t" << local_quadrature_points_history[0].upd_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[2][0] << " \t" << local_quadrature_points_history[0].upd_strain[2][1] << " \t" << local_quadrature_points_history[0].upd_strain[2][2] << std::endl;
-				std::cout << std::endl;*/
+				std::cout << std::endl;
 
 				// For debug...
-				/*std::cout << " Avg Update Strain Tensor " << std::endl;
+				std::cout << " Avg Update Strain Tensor " << std::endl;
 				std::cout << avg_upd_strain_tensor[0][0] << " \t" << avg_upd_strain_tensor[0][1] << " \t" << avg_upd_strain_tensor[0][2] << std::endl;
 				std::cout << avg_upd_strain_tensor[1][0] << " \t" << avg_upd_strain_tensor[1][1] << " \t" << avg_upd_strain_tensor[1][2] << std::endl;
 				std::cout << avg_upd_strain_tensor[2][0] << " \t" << avg_upd_strain_tensor[2][1] << " \t" << avg_upd_strain_tensor[2][2] << std::endl;
-				std::cout << std::endl;*/
+				std::cout << std::endl;
 
 				bool cell_to_be_updated = false;
 				//if ((cell->active_cell_index() < 95) && (cell->active_cell_index() > 90) && (newtonstep_no > 0)) // For debug...
