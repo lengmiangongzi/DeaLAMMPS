@@ -310,7 +310,7 @@ namespace HMM
 		double dts = 2.0;
 
 		// number of timesteps for straining
-		double strain_rate = 1.0e-5; // in fs^(-1)
+		double strain_rate = 1.0e-6; // in fs^(-1)
 		double strain_nrm = 0.005;
 		int nsstrain = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
@@ -527,7 +527,7 @@ namespace HMM
 		// timestep length in fs
 		double dts = 2.0;
 		// number of timesteps
-		double strain_rate = 1.0e-5; // in fs^(-1)
+		double strain_rate = 1.0e-6; // in fs^(-1)
 		double strain_nrm = strain.norm();
 		int nts = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
@@ -665,7 +665,7 @@ namespace HMM
 
 		// Save data to specific file for this quadrature point
 		// At the end of the homogenization the state after sampling the current stress is reread to prepare this write
-		//sprintf(cline, "write_restart %s/%s", statelocout, straindata_last); lammps_command(lmp,cline);
+		sprintf(cline, "write_restart %s/%s", statelocout, straindata_last); lammps_command(lmp,cline);
 
 		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
@@ -686,7 +686,7 @@ namespace HMM
 
 		// Save data to specific file for this quadrature point
 		// At the end of the homogenization the state after sampling the current stress is reread to prepare this write
-		sprintf(cline, "write_restart %s/%s", statelocout, straindata_last); lammps_command(lmp,cline);
+		//sprintf(cline, "write_restart %s/%s", statelocout, straindata_last); lammps_command(lmp,cline);
 
 		// close down LAMMPS
 		delete lmp;
@@ -1263,7 +1263,7 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values
 	(const double present_timestep, const int timestep_no)
 	{
-		if (timestep_no < 151) velocity = +0.001;
+		if (timestep_no < 301) velocity = +0.001;
 		else velocity = -0.001;
 
 		FEValuesExtractors::Scalar x_component (dim-3);
@@ -3358,7 +3358,7 @@ namespace HMM
 		// Initialization of time variables
 		present_time = 0;
 		present_timestep = 1;
-		end_time = 300;
+		end_time = 900;
 		timestep_no = 0;
 
 		hcout << " Initiation of the Mesh...       " << std::endl;

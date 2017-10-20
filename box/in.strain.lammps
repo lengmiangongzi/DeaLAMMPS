@@ -84,6 +84,15 @@ run             ${nts} #2000000
 #  Releasing fix deform constraint
 unfix 1
 
+#  Setting 2fs timesteps
+#timestep        dts #2.0  #(in wrapper)
+timestep        ${dts} #2.0
+
+#  Running a molecular dynamics simulation for relaxation of applied strain
+#  during the same amount of time
+#run             nts #2000000  #(in wrapper)
+run             ${nts} #2000000
+
 #  Releasing fix constraints
 unfix 3
 unfix 4
