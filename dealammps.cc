@@ -310,7 +310,7 @@ namespace HMM
 		double dts = 2.0;
 
 		// number of timesteps for straining
-		double strain_rate = 1.0e-6; // in fs^(-1)
+		double strain_rate = 1.0e-3; // in fs^(-1)
 		double strain_nrm = 0.005;
 		int nsstrain = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
@@ -527,9 +527,16 @@ namespace HMM
 		// timestep length in fs
 		double dts = 2.0;
 		// number of timesteps
-		double strain_rate = 1.0e-6; // in fs^(-1)
+		double strain_rate = 1.0e-3; // in fs^(-1)
 		double strain_nrm = strain.norm();
 		int nts = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
+
+		// Relaxation parameters
+		double etol = 0.0;
+		double ftol = 1.0e-10;
+		int maxiter = 100;
+		int maxeval = 1000;
+		double dmax = 1.0e-2;
 
 		// v_sound in PE is 2000m/s, since l0 = 8nm, with dts = 2.0fs, the condition
 		// is nts > 1000 * strain so that v_load < v_sound...
@@ -655,6 +662,12 @@ namespace HMM
 				sprintf(cline, "variable eeps_%d%d equal %.6e", k, l, strain[k][l]/(nts*dts));
 				lammps_command(lmp,cline);
 			}
+
+		sprintf(cline, "variable etol equal %f", etol); lammps_command(lmp,cline);
+		sprintf(cline, "variable ftol equal %f", ftol); lammps_command(lmp,cline);
+		sprintf(cline, "variable maxiter equal %d", maxiter); lammps_command(lmp,cline);
+		sprintf(cline, "variable maxeval equal %d", maxeval); lammps_command(lmp,cline);
+		sprintf(cline, "variable dmax equal %f", dmax); lammps_command(lmp,cline);
 
 		// Run the NEMD simulations of the strained box
 		/*if (me == 0) std::cout << "               "
@@ -846,8 +859,8 @@ namespace HMM
 		dcout (std::cout,(this_FE_process == 0)),
 		triangulation(FE_communicator),
 		dof_handler (triangulation),
-		fe (FE_Q<dim>(2), dim),
-		quadrature_formula (3),
+		fe (FE_Q<dim>(1), dim),
+		quadrature_formula (2),
 		macrostatelocin (mslocin),
 		macrostatelocout (mslocout),
 		macrostatelocres (mslocres),
@@ -973,7 +986,7 @@ namespace HMM
 		displacement_update_grads (quadrature_formula.size(),
 				std::vector<Tensor<1,dim> >(dim));
 
-		double strain_perturbation = 0.01;
+		double strain_perturbation = 0.02;
 
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
 
@@ -1032,39 +1045,39 @@ namespace HMM
 						avg_upd_strain_tensor[k][l] /= quadrature_formula.size();
 
 				// For debug...
-				std::cout << " Total Strain Tensor 0 " << std::endl;
+				/*std::cout << " Total Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[0][0] << " \t" << local_quadrature_points_history[0].new_strain[0][1] << " \t" << local_quadrature_points_history[0].new_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[1][0] << " \t" << local_quadrature_points_history[0].new_strain[1][1] << " \t" << local_quadrature_points_history[0].new_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[2][0] << " \t" << local_quadrature_points_history[0].new_strain[2][1] << " \t" << local_quadrature_points_history[0].new_strain[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				// For debug...
-				std::cout << " Inc Strain Tensor 0 " << std::endl;
+				/*std::cout << " Inc Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].inc_strain[0][0] << " \t" << local_quadrature_points_history[0].inc_strain[0][1] << " \t" << local_quadrature_points_history[0].inc_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].inc_strain[1][0] << " \t" << local_quadrature_points_history[0].inc_strain[1][1] << " \t" << local_quadrature_points_history[0].inc_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].inc_strain[2][0] << " \t" << local_quadrature_points_history[0].inc_strain[2][1] << " \t" << local_quadrature_points_history[0].inc_strain[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				// For debug...
-				std::cout << " Newton Strain Tensor 0 " << std::endl;
+				/*std::cout << " Newton Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].newton_strain[0][0] << " \t" << local_quadrature_points_history[0].newton_strain[0][1] << " \t" << local_quadrature_points_history[0].newton_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].newton_strain[1][0] << " \t" << local_quadrature_points_history[0].newton_strain[1][1] << " \t" << local_quadrature_points_history[0].newton_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].newton_strain[2][0] << " \t" << local_quadrature_points_history[0].newton_strain[2][1] << " \t" << local_quadrature_points_history[0].newton_strain[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				// For debug...
-				std::cout << " Update Strain Tensor 0 " << std::endl;
+				/*std::cout << " Update Strain Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[0][0] << " \t" << local_quadrature_points_history[0].upd_strain[0][1] << " \t" << local_quadrature_points_history[0].upd_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[1][0] << " \t" << local_quadrature_points_history[0].upd_strain[1][1] << " \t" << local_quadrature_points_history[0].upd_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].upd_strain[2][0] << " \t" << local_quadrature_points_history[0].upd_strain[2][1] << " \t" << local_quadrature_points_history[0].upd_strain[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				// For debug...
-				std::cout << " Avg Update Strain Tensor " << std::endl;
+				/*std::cout << " Avg Update Strain Tensor " << std::endl;
 				std::cout << avg_upd_strain_tensor[0][0] << " \t" << avg_upd_strain_tensor[0][1] << " \t" << avg_upd_strain_tensor[0][2] << std::endl;
 				std::cout << avg_upd_strain_tensor[1][0] << " \t" << avg_upd_strain_tensor[1][1] << " \t" << avg_upd_strain_tensor[1][2] << std::endl;
 				std::cout << avg_upd_strain_tensor[2][0] << " \t" << avg_upd_strain_tensor[2][1] << " \t" << avg_upd_strain_tensor[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				bool cell_to_be_updated = false;
 				//if ((cell->active_cell_index() < 95) && (cell->active_cell_index() > 90) && (newtonstep_no > 0)) // For debug...
@@ -1226,18 +1239,18 @@ namespace HMM
 				}
 
 				// For debug...
-				std::cout << " Total Stress Tensor 0 " << std::endl;
+				/*std::cout << " Total Stress Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[0][0] << " \t" << local_quadrature_points_history[0].new_stress[0][1] << " \t" << local_quadrature_points_history[0].new_stress[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[1][0] << " \t" << local_quadrature_points_history[0].new_stress[1][1] << " \t" << local_quadrature_points_history[0].new_stress[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_stress[2][0] << " \t" << local_quadrature_points_history[0].new_stress[2][1] << " \t" << local_quadrature_points_history[0].new_stress[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				// For debug...
-				std::cout << " Inc Stress Tensor 0 " << std::endl;
+				/*std::cout << " Inc Stress Tensor 0 " << std::endl;
 				std::cout << local_quadrature_points_history[0].inc_stress[0][0] << " \t" << local_quadrature_points_history[0].inc_stress[0][1] << " \t" << local_quadrature_points_history[0].inc_stress[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].inc_stress[1][0] << " \t" << local_quadrature_points_history[0].inc_stress[1][1] << " \t" << local_quadrature_points_history[0].inc_stress[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].inc_stress[2][0] << " \t" << local_quadrature_points_history[0].inc_stress[2][1] << " \t" << local_quadrature_points_history[0].inc_stress[2][2] << std::endl;
-				std::cout << std::endl;
+				std::cout << std::endl;*/
 
 				// Write update_strain tensor. Arbitrary use the data from the qp 0.
 				// Might be worth using data from the qp that exceeds most the threshold (norm?).
