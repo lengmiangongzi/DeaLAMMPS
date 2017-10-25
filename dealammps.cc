@@ -406,6 +406,13 @@ namespace HMM
 		// Temperature
 		double tempt = 200.0;
 
+		// Relaxation parameters
+		double etol = 0.0;
+		double ftol = 1.0e-10;
+		int maxiter = 100;
+		int maxeval = 1000;
+		double dmax = 1.0e-2;
+
 		// Locations for finding reference LAMMPS files, to store nanostate binary data, and
 		// to place LAMMPS log/dump/temporary restart outputs
 		char location[1024] = "../box";
@@ -464,6 +471,13 @@ namespace HMM
 		// Setting testing temperature
 		sprintf(cline, "variable tempt equal %f", tempt); lammps_command(lmp,cline);
 		sprintf(cline, "variable sseed equal 1234"); lammps_command(lmp,cline);
+
+		// Passing relaxation parameters
+		sprintf(cline, "variable etol equal %f", etol); lammps_command(lmp,cline);
+		sprintf(cline, "variable ftol equal %f", ftol); lammps_command(lmp,cline);
+		sprintf(cline, "variable maxiter equal %d", maxiter); lammps_command(lmp,cline);
+		sprintf(cline, "variable maxeval equal %d", maxeval); lammps_command(lmp,cline);
+		sprintf(cline, "variable dmax equal %f", dmax); lammps_command(lmp,cline);
 
 		// Check if 'init.PE.bin' has been computed already
 		sprintf(sfile, "%s/%s", statelocin, initdata);
