@@ -310,7 +310,7 @@ namespace HMM
 		double dts = 2.0;
 
 		// number of timesteps for straining
-		double strain_rate = 1.0e-3; // in fs^(-1)
+		double strain_rate = 1.0e-5; // in fs^(-1)
 		double strain_nrm = 0.005;
 		int nsstrain = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
@@ -409,7 +409,7 @@ namespace HMM
 		// Relaxation parameters
 		double etol = 0.0;
 		double ftol = 1.0e-10;
-		int maxiter = 100;
+		int maxiter = 500;
 		int maxeval = 1000;
 		double dmax = 1.0e-2;
 
@@ -544,14 +544,14 @@ namespace HMM
 		// timestep length in fs
 		double dts = 2.0;
 		// number of timesteps
-		double strain_rate = 1.0e-3; // in fs^(-1)
+		double strain_rate = 1.0e-5; // in fs^(-1)
 		double strain_nrm = strain.norm();
 		int nts = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
 		// Relaxation parameters
 		double etol = 0.0;
 		double ftol = 1.0e-10;
-		int maxiter = 100;
+		int maxiter = 500;
 		int maxeval = 1000;
 		double dmax = 1.0e-2;
 
