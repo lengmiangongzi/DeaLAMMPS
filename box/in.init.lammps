@@ -213,4 +213,24 @@ unfix           3
 #  Releasing fix constraints
 unfix 4
 
+# Setup minimization style
+min_style	     cg
+min_modify dmax ${dmax} line quadratic
+
+# Infinitely long relaxation
+minimize ${etol} ${ftol} ${maxiter} ${maxeval}
+
+variable tmp equal pxx
+variable pp11 equal ${tmp}
+variable tmp equal pyy
+variable pp22 equal ${tmp}
+variable tmp equal pzz
+variable pp33 equal ${tmp}
+variable tmp equal pxy
+variable pp12 equal ${tmp}
+variable tmp equal pxz
+variable pp13 equal ${tmp}
+variable tmp equal pyz
+variable pp23 equal ${tmp}
+
 undump            xyz_dump

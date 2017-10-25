@@ -986,7 +986,7 @@ namespace HMM
 		displacement_update_grads (quadrature_formula.size(),
 				std::vector<Tensor<1,dim> >(dim));
 
-		double strain_perturbation = 0.02;
+		double strain_perturbation = 0.01;
 
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
 
@@ -1587,7 +1587,7 @@ namespace HMM
 		// Therefore, extra precision is required in the solver proportionnaly
 		// to the norm of the system matrix, to reduce sufficiently our residual
 		SolverControl       solver_control (dof_handler.n_dofs(),
-				1e-12/system_matrix.l1_norm());
+				1e-06/system_matrix.l1_norm());
 
 		PETScWrappers::SolverCG cg (solver_control,
 				FE_communicator);
