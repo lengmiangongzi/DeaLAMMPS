@@ -499,6 +499,7 @@ namespace HMM
 			// heatup/cooldown), this option shouldn't remain, as in the first step the
 			// preparation should always be computed.
 			sprintf(cline, "read_restart %s/%s", statelocin, initdata); lammps_command(lmp,cline);
+			sprintf(cfile, "%s/%s", location, "in.relax.lammps"); lammps_file(lmp,cfile);
 		}
 
 		if (me == 0) std::cout << "(MD - init - repl " << repl << ") "
@@ -1290,7 +1291,7 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values
 	(const double present_timestep, const int timestep_no)
 	{
-		if (timestep_no < 301) velocity = +0.001;
+		if (timestep_no < 201) velocity = +0.001;
 		else velocity = -0.001;
 
 		FEValuesExtractors::Scalar x_component (dim-3);
@@ -3385,7 +3386,7 @@ namespace HMM
 		// Initialization of time variables
 		present_time = 0;
 		present_timestep = 1;
-		end_time = 900;
+		end_time = 400;
 		timestep_no = 0;
 
 		hcout << " Initiation of the Mesh...       " << std::endl;
