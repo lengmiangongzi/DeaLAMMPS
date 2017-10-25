@@ -499,6 +499,8 @@ namespace HMM
 			// heatup/cooldown), this option shouldn't remain, as in the first step the
 			// preparation should always be computed.
 			sprintf(cline, "read_restart %s/%s", statelocin, initdata); lammps_command(lmp,cline);
+			sprintf(cfile, "%s/%s", location, "ELASTIC/init.mod.lammps"); lammps_file(lmp,cfile);
+			sprintf(cfile, "%s/%s", location, "ELASTIC/potential.mod.lammps"); lammps_file(lmp,cfile);
 			sprintf(cfile, "%s/%s", location, "in.relax.lammps"); lammps_file(lmp,cfile);
 		}
 
