@@ -1,6 +1,5 @@
-# Setup minimization style
-min_style	     cg
-min_modify dmax ${dmax} line quadratic
+include ./ELASTIC/init.mod.lammps
+include ./ELASTIC/potential.mod.lammps
 
 # Infinitely long relaxation
 minimize ${etol} ${ftol} ${maxiter} ${maxeval}
