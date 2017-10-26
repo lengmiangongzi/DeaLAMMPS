@@ -72,20 +72,20 @@ include ${locbe}/potential.mod.lammps
 #variable pp23 equal ${tmp}
 
 # Infinitely long relaxation
-#minimize ${etol} ${ftol} ${maxiter} ${maxeval}
+minimize ${etol} ${ftol} ${maxiter} ${maxeval}
 
-#variable tmp equal pxx
-#variable pp11 equal ${tmp}
-#variable tmp equal pyy
-#variable pp22 equal ${tmp}
-#variable tmp equal pzz
-#variable pp33 equal ${tmp}
-#variable tmp equal pxy
-#variable pp12 equal ${tmp}
-#variable tmp equal pxz
-#variable pp13 equal ${tmp}
-#variable tmp equal pyz
-#variable pp23 equal ${tmp}
+variable tmp equal pxx
+variable pp11 equal ${tmp}
+variable tmp equal pyy
+variable pp22 equal ${tmp}
+variable tmp equal pzz
+variable pp33 equal ${tmp}
+variable tmp equal pxy
+variable pp12 equal ${tmp}
+variable tmp equal pxz
+variable pp13 equal ${tmp}
+variable tmp equal pyz
+variable pp23 equal ${tmp}
 
 ## Possibility #2: Apply fixed NVT and let the system fluctuate during MD
 ## simulation over sufficient time and get the initial stress (try to avoid doing it
@@ -249,9 +249,3 @@ print "Elastic Constant C56all = ${C56all} ${cunits}"
 #print "Shear Modulus 1 = ${shearmodulus1} ${cunits}"
 #print "Shear Modulus 2 = ${shearmodulus2} ${cunits}"
 #print "Poisson Ratio = ${poissonratio}"
-
-# read restart for the c++ wrapper to write it
-#clear
-#box tilt large
-#read_restart ${loco}/restart.equil
-#include ${locbe}/potential.mod.lammps
