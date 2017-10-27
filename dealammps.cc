@@ -323,10 +323,10 @@ namespace HMM
 		double dts = 2.0;
 
 		// number of timesteps for averaging
-		//int nssample = 200;
+		int nssample = 200;
 		// Set sampling and straining time-lengths
-		//sprintf(cline, "variable nssample0 equal %d", nssample); lammps_command(lmp,cline);
-		//sprintf(cline, "variable nssample  equal %d", nssample); lammps_command(lmp,cline);
+		sprintf(cline, "variable nssample0 equal %d", nssample); lammps_command(lmp,cline);
+		sprintf(cline, "variable nssample  equal %d", nssample); lammps_command(lmp,cline);
 
 		// number of timesteps for straining
 		double strain_rate = 1.0e-3; // in fs^(-1)
@@ -557,7 +557,7 @@ namespace HMM
 		// timestep length in fs
 		double dts = 2.0;
 		// number of timesteps
-		double strain_rate = 1.0e-5; // in fs^(-1)
+		double strain_rate = 1.0e-6; // in fs^(-1)
 		double strain_nrm = strain.norm();
 		int nts = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 

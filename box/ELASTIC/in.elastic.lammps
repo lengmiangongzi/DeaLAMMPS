@@ -51,41 +51,41 @@ include ${locbe}/potential.mod.lammps
 
 # Sample initial state (if initialization only, otherwise
 # restore initial stress tensor)
-#variable nss equal ${nssample0}
-#fix   shak all shake 0.001 20 1000 m 1.0
-#fix   wholevol all nvt temp ${tempt} ${tempt} 100.0
-#include ${locbe}/sample.mod.lammps
-#unfix wholevol
-#unfix shak
+variable nss equal ${nssample0}
+fix   shak all shake 0.001 20 1000 m 1.0
+fix   wholevol all nvt temp ${tempt} ${tempt} 100.0
+include ${locbe}/sample.mod.lammps
+unfix wholevol
+unfix shak
 
-#variable tmp equal f_stress[1]
-#variable pp11 equal ${tmp}
-#variable tmp equal f_stress[2]
-#variable pp22 equal ${tmp}
-#variable tmp equal f_stress[3]
-#variable pp33 equal ${tmp}
-#variable tmp equal f_stress[4]
-#variable pp12 equal ${tmp}
-#variable tmp equal f_stress[5]
-#variable pp13 equal ${tmp}
-#variable tmp equal f_stress[6]
-#variable pp23 equal ${tmp}
+variable tmp equal f_stress[1]
+variable pp11 equal ${tmp}
+variable tmp equal f_stress[2]
+variable pp22 equal ${tmp}
+variable tmp equal f_stress[3]
+variable pp33 equal ${tmp}
+variable tmp equal f_stress[4]
+variable pp12 equal ${tmp}
+variable tmp equal f_stress[5]
+variable pp13 equal ${tmp}
+variable tmp equal f_stress[6]
+variable pp23 equal ${tmp}
 
 # Infinitely long relaxation
-minimize ${etol} ${ftol} ${maxiter} ${maxeval}
-
-variable tmp equal pxx
-variable pp11 equal ${tmp}
-variable tmp equal pyy
-variable pp22 equal ${tmp}
-variable tmp equal pzz
-variable pp33 equal ${tmp}
-variable tmp equal pxy
-variable pp12 equal ${tmp}
-variable tmp equal pxz
-variable pp13 equal ${tmp}
-variable tmp equal pyz
-variable pp23 equal ${tmp}
+#minimize ${etol} ${ftol} ${maxiter} ${maxeval}
+#
+#variable tmp equal pxx
+#variable pp11 equal ${tmp}
+#variable tmp equal pyy
+#variable pp22 equal ${tmp}
+#variable tmp equal pzz
+#variable pp33 equal ${tmp}
+#variable tmp equal pxy
+#variable pp12 equal ${tmp}
+#variable tmp equal pxz
+#variable pp13 equal ${tmp}
+#variable tmp equal pyz
+#variable pp23 equal ${tmp}
 
 ## Possibility #2: Apply fixed NVT and let the system fluctuate during MD
 ## simulation over sufficient time and get the initial stress (try to avoid doing it
