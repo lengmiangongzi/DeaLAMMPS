@@ -1217,21 +1217,26 @@ namespace HMM
 
 				for (unsigned int q=0; q<quadrature_formula.size(); ++q)
 				{
+
+					if (newtonstep_no == 0) local_quadrature_points_history[q].inc_stress = 0.;
+
 					if (local_quadrature_points_history[q].to_be_updated){
 						sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id);
 						read_tensor<dim>(filename, local_quadrature_points_history[q].new_stiff);
 
+						sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id);
+						read_tensor<dim>(filename, local_quadrature_points_history[q].new_stress);
+
 						local_quadrature_points_history[q].upd_strain = 0;
 					}
+					else{
+						// Tangent stiffness computation of the new stress tensor and the stress increment tensor
+						local_quadrature_points_history[q].inc_stress +=
+							local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
 
-					if (newtonstep_no == 0) local_quadrature_points_history[q].inc_stress = 0.;
-
-					// Tangent stiffness computation of the new stress tensor and the stress increment tensor
-					local_quadrature_points_history[q].inc_stress +=
-						local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
-
-					local_quadrature_points_history[q].new_stress +=
-						local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
+						local_quadrature_points_history[q].new_stress +=
+							local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
+					}
 
 					// Secant stiffness computation of the new stress tensor
 					//local_quadrature_points_history[q].new_stress =
@@ -2867,7 +2872,7 @@ namespace HMM
 				{
 
 					SymmetricTensor<2,dim> loc_strain;
-					SymmetricTensor<2,dim> loc_stress;
+					SymmetricTensor<2,dim> loc_rep_stress;
 
 					char filename[1024];
 
@@ -2896,7 +2901,7 @@ namespace HMM
 					// the new_ and _old_strains, returns the new_stress state.
 					lammps_straining<dim> (loc_strain,
 							init_rep_stress,
-							loc_stress,
+							loc_rep_stress,
 							loc_rep_stiffness,
 							cell_id[c],
 							time_id,
@@ -2913,6 +2918,10 @@ namespace HMM
 						std::cout << " \t" << cell_id[c] <<"-"<< repl << " \t" << std::flush;
 						sprintf(filename, "%s/last.%s.PE_%d.stiff", macrostatelocout, cell_id[c], repl);
 						write_tensor<dim>(filename, loc_rep_stiffness);
+
+						std::cout << " \t" << cell_id[c] <<"-"<< repl << " \t" << std::flush;
+						sprintf(filename, "%s/last.%s.PE_%d.stress", macrostatelocout, cell_id[c], repl);
+						write_tensor<dim>(filename, loc_rep_stress);
 					}
 				}
 			}
@@ -2974,6 +2983,7 @@ namespace HMM
 				if(this_lammps_batch_process == 0)
 				{
 					SymmetricTensor<4,dim> loc_stiffness;
+					SymmetricTensor<2,dim> loc_stress;
 					char filename[1024];
 
 					for(unsigned int repl=1;repl<nrepl+1;repl++)
@@ -2983,9 +2993,16 @@ namespace HMM
 						read_tensor<dim>(filename, loc_rep_stiffness);
 
 						loc_stiffness += loc_rep_stiffness;
+
+						SymmetricTensor<2,dim> loc_rep_stress;
+						sprintf(filename, "%s/last.%s.PE_%d.stress", macrostatelocout, cell_id[c], repl);
+						read_tensor<dim>(filename, loc_rep_stress);
+
+						loc_stress += loc_rep_stress;
 					}
 
 					loc_stiffness /= nrepl;
+					loc_stress /= nrepl;
 
 					// For debug...
 					std::cout << "               "
@@ -3015,6 +3032,9 @@ namespace HMM
 
 					sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id[c]);
 					write_tensor<dim>(filename, loc_stiffness);
+
+					sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id[c]);
+					write_tensor<dim>(filename, loc_stress);
 
 					//					// Save stiffness history for later checking...
 					//					sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id[c]);
