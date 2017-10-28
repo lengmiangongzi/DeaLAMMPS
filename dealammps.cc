@@ -727,6 +727,9 @@ namespace HMM
 		// Compute the secant stiffness tensor at the given stress/strain state
 		lammps_homogenization<dim>(lmp, location, stress, stiffness, 0);
 
+		// Cleaning initial offset of stresses
+		stress -= init_stress;
+
 		// Save data to specific file for this quadrature point
 		// At the end of the homogenization the state after sampling the current stress is reread to prepare this write
 		//sprintf(cline, "write_restart %s/%s", statelocout, straindata_last); lammps_command(lmp,cline);
