@@ -721,7 +721,7 @@ namespace HMM
 		for(unsigned int k=0;k<dim;k++)
 			for(unsigned int l=k;l<dim;l++)
 			{
-				sprintf(cline, "variable isig_%d%d equal %.6e", k, l, init_stress[k][l]/1.01325e+05);
+				sprintf(cline, "variable isig_%d%d equal %.6e", k, l, (-1)*init_stress[k][l]/1.01325e+05);
 				lammps_command(lmp,cline);
 			}
 		// Compute the secant stiffness tensor at the given stress/strain state
