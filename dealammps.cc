@@ -2465,7 +2465,7 @@ namespace HMM
 			for(unsigned int repl=1;repl<nrepl+1;repl++)
 			{
 				sprintf(command, "rm -rf %s/R%d/*", nanologloc, repl);
-				system(command);
+				//system(command);
 			}
 		}
 	}
