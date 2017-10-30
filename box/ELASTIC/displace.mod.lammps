@@ -31,22 +31,22 @@ variable delta equal (v_sign)*${up}*${len0}
 fix   shak all shake 0.001 20 1000 m 1.0
 fix   partvol all nvt temp ${tempt} ${tempt} 100.0
 if "${dir} == 1" then &
-   "variable sign equal ${eeps_00}/sqrt(${eeps_00}*${eeps_00})" &
+   "variable sign equal ${seeps_00}" &
    "fix infstrain all deform 1 x delta 0 ${delta} remap x"
 if "${dir} == 2" then &
-   "variable sign equal ${eeps_11}/sqrt(${eeps_11}*${eeps_11})" &
+   "variable sign equal ${seeps_11}" &
    "fix infstrain all deform 1 y delta 0 ${delta} remap x"
 if "${dir} == 3" then &
-   "variable sign equal ${eeps_22}/sqrt(${eeps_22}*${eeps_22})" &
+   "variable sign equal ${seeps_22}" &
    "fix infstrain all deform 1 z delta 0 ${delta} remap x"
 if "${dir} == 4" then &
-   "variable sign equal ${eeps_12}/sqrt(${eeps_12}*${eeps_12})" &
+   "variable sign equal ${seeps_12}" &
    "fix infstrain all deform 1 yz delta ${delta} remap x"
 if "${dir} == 5" then &
-   "variable sign equal ${eeps_02}/sqrt(${eeps_02}*${eeps_02})" &
+   "variable sign equal ${seeps_02}" &
    "fix infstrain all deform 1 xz delta ${delta} remap x"
 if "${dir} == 6" then &
-   "variable sign equal ${eeps_01}/sqrt(${eeps_01}*${eeps_01})" &
+   "variable sign equal ${seeps_01}" &
    "fix infstrain all deform 1 xy delta ${delta} remap x"
 
 # Apply infinitesimal strain
