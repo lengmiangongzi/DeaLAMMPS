@@ -329,7 +329,7 @@ namespace HMM
 		sprintf(cline, "variable nssample  equal %d", nssample); lammps_command(lmp,cline);
 
 		// number of timesteps for straining
-		double strain_rate = 1.0e-6; // in fs^(-1)
+		double strain_rate = 1.0e-5; // in fs^(-1)
 		double strain_nrm = 0.005;
 		int nsstrain = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 		// For v_sound_PE = 2000 m/s, l_box=8nm, strain_perturbation=0.005, and dts=2.0fs
@@ -557,7 +557,7 @@ namespace HMM
 		// timestep length in fs
 		double dts = 2.0;
 		// number of timesteps
-		double strain_rate = 1.0e-6; // in fs^(-1)
+		double strain_rate = 1.0e-5; // in fs^(-1)
 		double strain_nrm = strain.norm();
 		int nts = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
 
@@ -1019,7 +1019,7 @@ namespace HMM
 		displacement_update_grads (quadrature_formula.size(),
 				std::vector<Tensor<1,dim> >(dim));
 
-		double strain_perturbation = 0.01;
+		double strain_perturbation = 0.005;
 
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
 
