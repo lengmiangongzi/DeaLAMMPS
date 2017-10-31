@@ -113,6 +113,27 @@ namespace HMM
 	template <int dim>
 	inline
 	void
+	read_tensor (char *filename, std::vector<double> &tensor)
+	{
+		std::ifstream ifile;
+
+		ifile.open (filename);
+		if (ifile.is_open())
+		{
+			for(unsigned int k=0;k<tensor.size();k++)
+				{
+					char line[1024];
+					if(ifile.getline(line, sizeof(line)))
+						tensor[k] = std::strtod(line, NULL);
+				}
+			ifile.close();
+		}
+		else std::cout << "Unable to open" << filename << " to read it" << std::endl;
+	}
+
+	template <int dim>
+	inline
+	void
 	read_tensor (char *filename, SymmetricTensor<2,dim> &tensor)
 	{
 		std::ifstream ifile;
@@ -154,6 +175,24 @@ namespace HMM
 			ifile.close();
 		}
 		else std::cout << "Unable to open" << filename << " to read it..." << std::endl;
+	}
+
+	template <int dim>
+	inline
+	void
+	write_tensor (char *filename, std::vector<double> &tensor)
+	{
+		std::ofstream ofile;
+
+		ofile.open (filename);
+		if (ofile.is_open())
+		{
+			for(unsigned int k=0;k<tensor.size();k++)
+					//std::cout << std::setprecision(16) << tensor[k][l] << std::endl;
+					ofile << std::setprecision(16) << tensor[k] << std::endl;
+			ofile.close();
+		}
+		else std::cout << "Unable to open" << filename << " to write in it" << std::endl;
 	}
 
 	template <int dim>
@@ -406,6 +445,7 @@ namespace HMM
 	void
 	lammps_initiation (SymmetricTensor<2,dim>& stress,
 					   SymmetricTensor<4,dim>& stiffness,
+					   std::vector<double>& lbox0,
 					   MPI_Comm comm_lammps,
 					   char* statelocin,
 					   char* statelocout,
@@ -517,6 +557,22 @@ namespace HMM
 			sprintf(cfile, "%s/%s", location, "in.relax.lammps"); lammps_file(lmp,cfile);*/
 		}
 
+		// Storing initial dimensions after initiation
+		char lname[1024];
+		sprintf(lname, "lxbox0");
+		sprintf(cline, "variable tmp equal 'lx'"); lammps_command(lmp,cline);
+		sprintf(cline, "variable %s equal ${tmp}", lname); lammps_command(lmp,cline);
+		lbox0[0] = *((double *) lammps_extract_variable(lmp,lname,NULL));
+		sprintf(lname, "lybox0");
+		sprintf(cline, "variable tmp equal 'ly'"); lammps_command(lmp,cline);
+		sprintf(cline, "variable %s equal ${tmp}", lname); lammps_command(lmp,cline);
+		lbox0[1] = *((double *) lammps_extract_variable(lmp,lname,NULL));
+		sprintf(lname, "lzbox0");
+		sprintf(cline, "variable tmp equal 'lz'"); lammps_command(lmp,cline);
+		sprintf(cline, "variable %s equal ${tmp}", lname); lammps_command(lmp,cline);
+		lbox0[2] = *((double *) lammps_extract_variable(lmp,lname,NULL));
+
+		// Saving nanostate at the end of initiation
 		if (me == 0) std::cout << "(MD - init - repl " << repl << ") "
 				<< "Saving state data...       " << std::endl;
 		sprintf(cline, "write_restart %s/%s", statelocout, initdata); lammps_command(lmp,cline);
@@ -543,6 +599,7 @@ namespace HMM
 			SymmetricTensor<2,dim>& init_stress,
 			SymmetricTensor<2,dim>& stress,
 			SymmetricTensor<4,dim>& stiffness,
+			std::vector<double>& length,
 			char* cellid,
 			char* timeid,
 			MPI_Comm comm_lammps,
@@ -624,6 +681,11 @@ namespace HMM
 		// Creating LAMMPS instance
 		LAMMPS *lmp = NULL;
 		lmp = new LAMMPS(nargs,lmparg,comm_lammps);
+
+		// Passing initial dimension of the box to adjust applied strain
+		sprintf(cline, "variable lxbox0 equal %f", length[0]); lammps_command(lmp,cline);
+		sprintf(cline, "variable lybox0 equal %f", length[1]); lammps_command(lmp,cline);
+		sprintf(cline, "variable lzbox0 equal %f", length[2]); lammps_command(lmp,cline);
 
 		// Passing location for output as variable
 		sprintf(cline, "variable loco string %s", qpreplogloc); lammps_command(lmp,cline);
@@ -2893,10 +2955,15 @@ namespace HMM
 
 					SymmetricTensor<4,dim> loc_rep_stiffness;
 					SymmetricTensor<2,dim> init_rep_stress;
+					std::vector<double> init_rep_length (dim);
 
 					// Arguments of the secant stiffness computation
 					sprintf(filename, "%s/init.PE_%d.stress", macrostatelocout, repl);
 					read_tensor<dim>(filename, init_rep_stress);
+
+					// Providing initial box dimension to adjust the strain tensor
+					sprintf(filename, "%s/init.PE_%d.length", macrostatelocout, repl);
+					read_tensor<dim>(filename, init_rep_length);
 
 					// Then the lammps function instanciates lammps, starting from an initial
 					// microstructure and applying the complete new_strain or starting from
@@ -2906,6 +2973,7 @@ namespace HMM
 							init_rep_stress,
 							loc_rep_stress,
 							loc_rep_stiffness,
+							init_rep_length,
 							cell_id[c],
 							time_id,
 							lammps_batch_communicator,
@@ -3190,6 +3258,7 @@ namespace HMM
 			int irepl = repl-1;
 			if (lammps_pcolor == (irepl%n_lammps_batch))
 			{
+				std::vector<double> 				initial_length (dim);
 				SymmetricTensor<2,dim> 				initial_stress_tensor;
 				SymmetricTensor<4,dim> 				initial_stiffness_tensor;
 
@@ -3205,15 +3274,21 @@ namespace HMM
 				sprintf(macrofilenameoutstress, "%s/init.PE_%d.stress", macrostatelocout, repl);
 				bool macrostatestress_exists = file_exists(macrofilenameinstress);
 
+				char macrofilenameinlength[1024];
+				sprintf(macrofilenameinlength, "%s/init.PE_%d.length", macrostatelocin, repl);
+				char macrofilenameoutlength[1024];
+				sprintf(macrofilenameoutlength, "%s/init.PE_%d.length", macrostatelocout, repl);
+				bool macrostatelength_exists = file_exists(macrofilenameinlength);
+
 				char nanofilenamein[1024];
 				sprintf(nanofilenamein, "%s/init.PE_%d.bin", nanostatelocin, repl);
 				char nanofilenameout[1024];
 				sprintf(nanofilenameout, "%s/init.PE_%d.bin", nanostatelocout, repl);
 				bool nanostate_exists = file_exists(nanofilenamein);
 
-				if(!(macrostate_exists && macrostatestress_exists) || !nanostate_exists){
+				if(!macrostate_exists || !macrostatestress_exists || !macrostatelength_exists || !nanostate_exists){
 					if(this_lammps_batch_process == 0) std::cout << " (repl "<< repl << ") ...from a molecular dynamics simulation       " << std::endl;
-					lammps_initiation<dim> (initial_stress_tensor, initial_stiffness_tensor, lammps_batch_communicator,
+					lammps_initiation<dim> (initial_stress_tensor, initial_stiffness_tensor, initial_length, lammps_batch_communicator,
 							nanostatelocin, nanostatelocout, nanologloc, repl);
 
 					// For debug...
@@ -3236,6 +3311,7 @@ namespace HMM
 
 					if(this_lammps_batch_process == 0) write_tensor<dim>(macrofilenameout, initial_stiffness_tensor);
 					if(this_lammps_batch_process == 0) write_tensor<dim>(macrofilenameoutstress, initial_stress_tensor);
+					if(this_lammps_batch_process == 0) write_tensor<dim>(macrofilenameoutlength, initial_length);
 				}
 				else{
 					if(this_lammps_batch_process == 0){
@@ -3251,6 +3327,12 @@ namespace HMM
 						macrostressout << macrostressin.rdbuf();
 						macrostressin.close();
 						macrostressout.close();
+
+						std::ifstream  macrolengthin(macrofilenameinlength, std::ios::binary);
+						std::ofstream  macrolengthout(macrofilenameoutlength,   std::ios::binary);
+						macrolengthout << macrolengthin.rdbuf();
+						macrolengthin.close();
+						macrolengthout.close();
 
 						std::ifstream  nanoin(nanofilenamein, std::ios::binary);
 						std::ofstream  nanoout(nanofilenameout,   std::ios::binary);
