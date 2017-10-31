@@ -71,22 +71,6 @@ variable pp13 equal ${tmp}
 variable tmp equal f_stress[6]
 variable pp23 equal ${tmp}
 
-# Infinitely long relaxation
-#minimize ${etol} ${ftol} ${maxiter} ${maxeval}
-#
-#variable tmp equal pxx
-#variable pp11 equal ${tmp}
-#variable tmp equal pyy
-#variable pp22 equal ${tmp}
-#variable tmp equal pzz
-#variable pp33 equal ${tmp}
-#variable tmp equal pxy
-#variable pp12 equal ${tmp}
-#variable tmp equal pxz
-#variable pp13 equal ${tmp}
-#variable tmp equal pyz
-#variable pp23 equal ${tmp}
-
 ## Possibility #2: Apply fixed NVT and let the system fluctuate during MD
 ## simulation over sufficient time and get the initial stress (try to avoid doing it
 ## again if this has been done at the end of the application of the strain state).

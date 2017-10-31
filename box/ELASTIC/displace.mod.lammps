@@ -16,7 +16,7 @@ if "${dir} == 5" then &
 if "${dir} == 6" then &
    "variable len0 equal ${lx0}"
 
-variable ori string "neg"
+# variable ori string "neg"
 # Reset box and simulation parameters
 
 clear
@@ -79,22 +79,6 @@ variable tmp equal f_stress[5]
 variable pxz1 equal ${tmp}
 variable tmp equal f_stress[6]
 variable pyz1 equal ${tmp}
-
-# Infinitely long relaxation
-#minimize ${etol} ${ftol} ${maxiter} ${maxeval}
-#
-#variable tmp equal pxx
-#variable pxx1 equal ${tmp}
-#variable tmp equal pyy
-#variable pyy1 equal ${tmp}
-#variable tmp equal pzz
-#variable pzz1 equal ${tmp}
-#variable tmp equal pxy
-#variable pxy1 equal ${tmp}
-#variable tmp equal pxz
-#variable pxz1 equal ${tmp}
-#variable tmp equal pyz
-#variable pyz1 equal ${tmp}
 
 print "${pxx1} ${pyy1} ${pzz1} ${pxy1} ${pxz1} ${pyz1} "
 

@@ -345,19 +345,6 @@ namespace HMM
 		sprintf(cline, "variable locbe string %s/%s", location, "ELASTIC");
 		lammps_command(lmp,cline);
 
-		// Relaxation parameters
-		double etol = 0.0;
-		double ftol = 1.0e-10;
-		int maxiter = 300;
-		int maxeval = 1000;
-		double dmax = 1.0e-2;
-
-		sprintf(cline, "variable etol equal %f", etol); lammps_command(lmp,cline);
-		sprintf(cline, "variable ftol equal %f", ftol); lammps_command(lmp,cline);
-		sprintf(cline, "variable maxiter equal %d", maxiter); lammps_command(lmp,cline);
-		sprintf(cline, "variable maxeval equal %d", maxeval); lammps_command(lmp,cline);
-		sprintf(cline, "variable dmax equal %f", dmax); lammps_command(lmp,cline);
-
 		// Timestep length in fs
 		double dts = 2.0;
 
@@ -459,13 +446,6 @@ namespace HMM
 		// Temperature
 		double tempt = 200.0;
 
-		// Relaxation parameters
-		double etol = 0.0;
-		double ftol = 1.0e-10;
-		int maxiter = 500;
-		int maxeval = 1000;
-		double dmax = 1.0e-2;
-
 		// Locations for finding reference LAMMPS files, to store nanostate binary data, and
 		// to place LAMMPS log/dump/temporary restart outputs
 		char location[1024] = "../box";
@@ -525,13 +505,6 @@ namespace HMM
 		sprintf(cline, "variable tempt equal %f", tempt); lammps_command(lmp,cline);
 		sprintf(cline, "variable sseed equal 1234"); lammps_command(lmp,cline);
 
-		// Passing relaxation parameters
-		sprintf(cline, "variable etol equal %f", etol); lammps_command(lmp,cline);
-		sprintf(cline, "variable ftol equal %f", ftol); lammps_command(lmp,cline);
-		sprintf(cline, "variable maxiter equal %d", maxiter); lammps_command(lmp,cline);
-		sprintf(cline, "variable maxeval equal %d", maxeval); lammps_command(lmp,cline);
-		sprintf(cline, "variable dmax equal %f", dmax); lammps_command(lmp,cline);
-
 		// Check if 'init.PE.bin' has been computed already
 		sprintf(sfile, "%s/%s", statelocin, initdata);
 		bool state_exists = file_exists(sfile);
@@ -552,9 +525,6 @@ namespace HMM
 			// heatup/cooldown), this option shouldn't remain, as in the first step the
 			// preparation should always be computed.
 			sprintf(cline, "read_restart %s/%s", statelocin, initdata); lammps_command(lmp,cline);
-			/*sprintf(cfile, "%s/%s", location, "ELASTIC/init.mod.lammps"); lammps_file(lmp,cfile);
-			sprintf(cfile, "%s/%s", location, "ELASTIC/potential.mod.lammps"); lammps_file(lmp,cfile);
-			sprintf(cfile, "%s/%s", location, "in.relax.lammps"); lammps_file(lmp,cfile);*/
 		}
 
 		// Storing initial dimensions after initiation
@@ -617,13 +587,6 @@ namespace HMM
 		double strain_rate = 1.0e-5; // in fs^(-1)
 		double strain_nrm = strain.norm();
 		int nts = std::ceil(strain_nrm/(dts*strain_rate)/10)*10;
-
-		// Relaxation parameters
-		double etol = 0.0;
-		double ftol = 1.0e-10;
-		int maxiter = 500;
-		int maxeval = 1000;
-		double dmax = 1.0e-2;
 
 		// v_sound in PE is 2000m/s, since l0 = 8nm, with dts = 2.0fs, the condition
 		// is nts > 1000 * strain so that v_load < v_sound...
@@ -754,12 +717,6 @@ namespace HMM
 				sprintf(cline, "variable eeps_%d%d equal %.6e", k, l, strain[k][l]/(nts*dts));
 				lammps_command(lmp,cline);
 			}
-
-		sprintf(cline, "variable etol equal %f", etol); lammps_command(lmp,cline);
-		sprintf(cline, "variable ftol equal %f", ftol); lammps_command(lmp,cline);
-		sprintf(cline, "variable maxiter equal %d", maxiter); lammps_command(lmp,cline);
-		sprintf(cline, "variable maxeval equal %d", maxeval); lammps_command(lmp,cline);
-		sprintf(cline, "variable dmax equal %f", dmax); lammps_command(lmp,cline);
 
 		// Run the NEMD simulations of the strained box
 		/*if (me == 0) std::cout << "               "
