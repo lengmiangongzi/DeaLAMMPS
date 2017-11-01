@@ -2947,7 +2947,7 @@ namespace HMM
 		MPI_Barrier(world_communicator);
 
 		// Verify the integrity of the stiffness tensor (constraint C_upd>stol*C_ini)
-		/*double stol = 0.001;
+		double stol = 0.001;
 
 		for (int c=0; c<ncupd; ++c)
 		{
@@ -2972,13 +2972,14 @@ namespace HMM
 							for(unsigned int l=k;l<dim;l++)
 								for(unsigned int m=0;m<dim;m++)
 									for(unsigned int n=m;n<dim;n++)
-										if(loc_upd_rep_stiffness[k][l][m][n] < stol*loc_ini_rep_stiffness[k][l][m][n])
+										if(fabs(loc_upd_rep_stiffness[k][l][m][n]) < stol*loc_ini_rep_stiffness[k][l][m][n])
 										{
 											//std::cout << "               "
 											//		  << "Cell: " << cell_id[c] << " Replica: " << repl
 											//		  << " required stiffness correction !!"
 											//		  << std::endl;
-											loc_upd_rep_stiffness[k][l][m][n] = stol*loc_ini_rep_stiffness[k][l][m][n];
+											loc_upd_rep_stiffness[k][l][m][n] *= stol*
+													loc_ini_rep_stiffness[k][l][m][n]/fabs(loc_upd_rep_stiffness[k][l][m][n]);
 										}
 
 						sprintf(filename, "%s/last.%s.PE_%d.stiff", macrostatelocout, cell_id[c], repl);
@@ -2988,7 +2989,7 @@ namespace HMM
 			}
 		}
 
-		MPI_Barrier(world_communicator);*/
+		MPI_Barrier(world_communicator);
 
 		for (int c=0; c<ncupd; ++c)
 		{
