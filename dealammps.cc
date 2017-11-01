@@ -967,8 +967,8 @@ namespace HMM
 				for(unsigned int m=0;m<dim;m++)
 					for(unsigned int n=m;n<dim;n++)
 						if(!((k==l && m==n) || (k==m && l==n))){
-							std::cout << "       ... removal of shear coupling terms" << std::endl;
-							stiffness_tensor[k][l][m][n] *= 0.0;
+							//std::cout << "       ... removal of shear coupling terms" << std::endl;
+							stiffness_tensor[k][l][m][n] *= 1.0;
 						}
 						else if(stiffness_tensor[k][l][m][n]<0.0) stiffness_tensor[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
@@ -1339,7 +1339,7 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values
 	(const double present_timestep, const int timestep_no)
 	{
-		if (timestep_no < 301) velocity = +0.001;
+		if (timestep_no < 151) velocity = +0.001;
 		else velocity = -0.001;
 
 		FEValuesExtractors::Scalar x_component (dim-3);
@@ -1650,7 +1650,7 @@ namespace HMM
 		// Therefore, extra precision is required in the solver proportionnaly
 		// to the norm of the system matrix, to reduce sufficiently our residual
 		SolverControl       solver_control (dof_handler.n_dofs(),
-				1e-06/system_matrix.l1_norm());
+				1e-03/system_matrix.l1_norm());
 
 		PETScWrappers::SolverCG cg (solver_control,
 				FE_communicator);
@@ -3059,8 +3059,8 @@ namespace HMM
 							for(unsigned int m=0;m<dim;m++)
 								for(unsigned int n=m;n<dim;n++)
 									if(!((k==l && m==n) || (k==m && l==n))){
-										std::cout << "       ... removal of shear coupling terms" << std::endl;
-										loc_stiffness[k][l][m][n] *= 0.0; // correction -> *= 0.0
+										//std::cout << "       ... removal of shear coupling terms" << std::endl;
+										loc_stiffness[k][l][m][n] *= 1.0; // correction -> *= 0.0
 									}
 									else if(loc_stiffness[k][l][m][n]<0.0) loc_stiffness[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
@@ -3469,7 +3469,7 @@ namespace HMM
 		// Initialization of time variables
 		present_time = 0;
 		present_timestep = 1;
-		end_time = 600;
+		end_time = 300;
 		timestep_no = 0;
 
 		hcout << " Initiation of the Mesh...       " << std::endl;
