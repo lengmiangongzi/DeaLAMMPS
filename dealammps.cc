@@ -1534,7 +1534,7 @@ namespace HMM
 					for (unsigned int q_point=0; q_point<n_q_points; ++q_point)
 					{
 						const SymmetricTensor<2,dim> &new_stress
-						= local_quadrature_points_data[q_point].inc_stress;
+						= local_quadrature_points_data[q_point].new_stress;
 
 						// how to handle body forces?
 						// apply increment of body force since last step...
@@ -1575,17 +1575,6 @@ namespace HMM
 				unsigned int component;
 				double value;
 				value = 0.;
-				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.
-						&& fabs(cell->vertex(v)(1) - -hh/2.) < eps/3.
-						&& fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.)
-					{
-						component = 0;
-						boundary_values.insert(std::pair<types::global_dof_index, double>
-								(cell->vertex_dof_index (v, component), value));
-						component = 2;
-						boundary_values.insert(std::pair<types::global_dof_index, double>
-								(cell->vertex_dof_index (v, component), value));
-					}
 				component = 2;
 				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.
 						/*|| fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.*/)
@@ -1607,7 +1596,7 @@ namespace HMM
 								(cell->vertex_dof_index (v, component), value));
 					}
 				component = 1;
-				if (fabs(cell->vertex(v)(1) - +hh/2.) < eps/3.)
+				if (loaded_boundary_dofs[cell->vertex_dof_index (v, component)])
 					{
 						boundary_values.insert(std::pair<types::global_dof_index, double>
 								(cell->vertex_dof_index (v, component), value));
