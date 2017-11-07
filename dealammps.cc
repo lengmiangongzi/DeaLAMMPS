@@ -838,6 +838,7 @@ namespace HMM
 		void set_boundary_values (const double present_timestep, const int timestep_no);
 		double assemble_system ();
 		void solve_linear_problem_CG ();
+		void solve_linear_problem_GMRES ();
 		void solve_linear_problem_BiCGStab ();
 		void solve_linear_problem_direct ();
 		void error_estimation ();
@@ -856,7 +857,7 @@ namespace HMM
 		void restart_output (char* nanologloc, char* nanostatelocout, char* nanostatelocres, unsigned int nrepl) const;
 
 		double compute_residual () const;
-		double compute_internal_forces () const;
+		Vector<double>  compute_internal_forces () const;
 
 		Vector<double> 		     			newton_update;
 		Vector<double> 		     			incremental_displacement;
@@ -1661,6 +1662,45 @@ namespace HMM
 
 
 	template <int dim>
+	void FEProblem<dim>::solve_linear_problem_GMRES ()
+	{
+		PETScWrappers::MPI::Vector
+		distributed_newton_update (locally_owned_dofs,FE_communicator);
+		distributed_newton_update = newton_update;
+
+		// The residual used internally to test solver convergence is
+		// not identical to ours, it probably considers preconditionning.
+		// Therefore, extra precision is required in the solver proportionnaly
+		// to the norm of the system matrix, to reduce sufficiently our residual
+		SolverControl       solver_control (dof_handler.n_dofs(),
+				1e-03/system_matrix.l1_norm());
+
+		PETScWrappers::SolverGMRES gmres (solver_control,
+				FE_communicator);
+
+		// Apparently (according to step-17.tuto) the BlockJacobi preconditionner is
+		// not optimal for large scale simulations.
+		PETScWrappers::PreconditionBlockJacobi preconditioner(system_matrix);
+		gmres.solve (system_matrix, distributed_newton_update, system_rhs,
+				preconditioner);
+
+		newton_update = distributed_newton_update;
+		hanging_node_constraints.distribute (newton_update);
+
+		const double alpha = determine_step_length();
+		incremental_displacement.add (alpha, newton_update);
+
+		dcout << "    FE Solver - norm of newton update is " << newton_update.l2_norm()
+							  << std::endl;
+		dcout << "    FE Solver converged in " << solver_control.last_step()
+				<< " iterations "
+				<< " with value " << solver_control.last_value()
+				<<  std::endl;
+	}
+
+
+
+	template <int dim>
 	void FEProblem<dim>::solve_linear_problem_BiCGStab ()
 	{
 		PETScWrappers::MPI::Vector
@@ -1820,7 +1860,7 @@ namespace HMM
 
 
 	template <int dim>
-	double FEProblem<dim>::compute_internal_forces () const
+	Vector<double> FEProblem<dim>::compute_internal_forces () const
 	{
 		PETScWrappers::MPI::Vector residual
 		(locally_owned_dofs, FE_communicator);
@@ -1872,22 +1912,10 @@ namespace HMM
 
 		residual.compress(VectorOperation::add);
 
-		double applied_force = 0.;
-
 		Vector<double> local_residual (dof_handler.n_dofs());
 		local_residual = residual;
 
-		dcout << "hello Y force ------ " << std::endl;
-		for (unsigned int i=0; i<dof_handler.n_dofs(); ++i)
-			if (loaded_boundary_dofs[i] == true)
-			{
-				dcout << "force: " << local_residual[i] << std::endl;
-				applied_force += local_residual[i];
-			}
-
-		dcout << "Total force : " << applied_force << std::endl;
-
-		return applied_force;
+		return local_residual;
 	}
 
 
@@ -1965,8 +1993,22 @@ namespace HMM
 	template <int dim>
 	void FEProblem<dim>::output_specific (const double present_time, const int timestep_no, unsigned int nrepl, char* nanostatelocout, char* nanostatelocoutsi)
 	{
-		// Compute applied force
-		double aforce = compute_internal_forces();
+		// Compute applied force vector
+		Vector<double> local_residual (dof_handler.n_dofs());
+		local_residual = compute_internal_forces();
+
+		// Compute force under the loading boundary condition
+		double aforce = 0.;
+		//dcout << "hello Y force ------ " << std::endl;
+		for (unsigned int i=0; i<dof_handler.n_dofs(); ++i)
+			if (loaded_boundary_dofs[i] == true)
+			{
+				dcout << "   force on loaded nodes: " << local_residual[i] << std::endl;
+				aforce += local_residual[i];
+			}
+
+		//dcout << "Total force : " << aforce << std::endl;
+
 		double idisp = velocity*timestep_no;
 		dcout << "Timestep: " << timestep_no << " - Time: " << present_time << " - Imp. Disp.: " << idisp << " - App. Force: " << aforce << std::endl;
 
@@ -2006,6 +2048,7 @@ namespace HMM
 
 			std::vector<unsigned int> tmp;
 
+			dcout << "Cells with detailed output: " << std::endl;
 			for (unsigned int i=0; i<llis.size(); i++)
 				for (typename DoFHandler<dim>::active_cell_iterator
 						cell = dof_handler.begin_active();
@@ -2023,7 +2066,7 @@ namespace HMM
 
 					if (cell->point_inside(llis[i])){
 						lcis.push_back(cell->active_cell_index());
-						dcout << "hello   " << llis[i][0] << " cells " << cell->active_cell_index() << std::endl;
+						dcout << "at x: " << llis[i][0] << " - y: " << llis[i][1] << " cells " << cell->active_cell_index() << std::endl;
 						//break;
 					}
 				}
@@ -3046,7 +3089,8 @@ namespace HMM
 										//std::cout << "       ... removal of shear coupling terms" << std::endl;
 										loc_stiffness[k][l][m][n] *= 1.0; // correction -> *= 0.0
 									}
-									else if(loc_stiffness[k][l][m][n]<0.0) loc_stiffness[k][l][m][n] *= +1.0; // correction -> *= -1.0
+									// Does not make any sense for tangent stiffness...
+									//else if(loc_stiffness[k][l][m][n]<0.0) loc_stiffness[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
 					sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id[c]);
 					write_tensor<dim>(filename, loc_stiffness);
@@ -3320,7 +3364,8 @@ namespace HMM
 								//std::cout << "       ... removal of shear coupling terms" << std::endl;
 								initial_ensemble_stiffness_tensor[k][l][m][n] *= 1.0;
 							}
-							else if(initial_ensemble_stiffness_tensor[k][l][m][n]<0.0) initial_ensemble_stiffness_tensor[k][l][m][n] *= +1.0; // correction -> *= -1.0
+							// Does not make any sense for tangent stiffness...
+							//else if(initial_ensemble_stiffness_tensor[k][l][m][n]<0.0) initial_ensemble_stiffness_tensor[k][l][m][n] *= +1.0; // correction -> *= -1.0
 
 			char macrofilenameout[1024];
 			sprintf(macrofilenameout, "%s/init.stiff", macrostatelocout);
