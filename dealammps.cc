@@ -1208,6 +1208,7 @@ namespace HMM
 			if (cell->is_locally_owned())
 			{
 				SymmetricTensor<2,dim> avg_upd_strain_tensor;
+				SymmetricTensor<2,dim> avg_stress_tensor;
 
 				PointHistory<dim> *local_quadrature_points_history
 				= reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
@@ -1226,6 +1227,7 @@ namespace HMM
 				char filename[1024];
 
 				avg_upd_strain_tensor = 0.;
+				avg_stress_tensor = 0.;
 
 				for (unsigned int q=0; q<quadrature_formula.size(); ++q)
 				{
@@ -1257,6 +1259,10 @@ namespace HMM
 					for(unsigned int k=0;k<dim;k++)
 						for(unsigned int l=k;l<dim;l++)
 							avg_upd_strain_tensor[k][l] += local_quadrature_points_history[q].upd_strain[k][l];
+
+					for(unsigned int k=0;k<dim;k++)
+						for(unsigned int l=k;l<dim;l++)
+							avg_stress_tensor[k][l] += local_quadrature_points_history[q].new_stress[k][l];
 
 					// Apply rotation of the sample to the new state tensors.
 					// Only needed if the mesh is modified...
@@ -1303,14 +1309,21 @@ namespace HMM
 				std::cout << local_quadrature_points_history[0].inc_stress[2][0] << " \t" << local_quadrature_points_history[0].inc_stress[2][1] << " \t" << local_quadrature_points_history[0].inc_stress[2][2] << std::endl;
 				std::cout << std::endl;*/
 
-				// Write update_strain tensor. Arbitrary use the data from the qp 0.
-				// Might be worth using data from the qp that exceeds most the threshold (norm?).
+				// Write update_strain tensor
 				for(unsigned int k=0;k<dim;k++)
 					for(unsigned int l=k;l<dim;l++)
 						avg_upd_strain_tensor[k][l] /= quadrature_formula.size();
 
 				sprintf(filename, "%s/last.%s.upstrain", macrostatelocout, cell_id);
 				write_tensor<dim>(filename, avg_upd_strain_tensor);
+
+				// Write stress tensor
+				for(unsigned int k=0;k<dim;k++)
+					for(unsigned int l=k;l<dim;l++)
+						avg_stress_tensor[k][l] /= quadrature_formula.size();
+
+				sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id);
+				write_tensor<dim>(filename, avg_stress_tensor);
 
 				// Save strain since update history for later checking...
 //				sprintf(filename, "%s/last.%s.upstrain", macrostatelocout, cell_id);
@@ -2434,6 +2447,17 @@ namespace HMM
 					macroout.close();
 				}
 
+				// Save stress history
+				sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id);
+				std::ifstream  macroinstress(filename, std::ios::binary);
+				if (macroinstress.good()){
+					sprintf(filename, "%s/lcts.%s.stress", macrostatelocres, cell_id);
+					std::ofstream  macrooutstress(filename,   std::ios::binary);
+					macrooutstress << macroinstress.rdbuf();
+					macroinstress.close();
+					macrooutstress.close();
+				}
+
 				// Save box state history
 				for(unsigned int repl=1;repl<nrepl+1;repl++)
 				{
@@ -2549,7 +2573,7 @@ namespace HMM
 			reps[0] = 1; reps[1] = 1; reps[2] = 1;
 			GridGenerator::subdivided_hyper_rectangle(triangulation, reps, pp1, pp2);
 
-			//triangulation.refine_global (1);
+			//triangulation.refine_global (2);
 
 			sprintf(filename, "%s/mesh.tria", macrostatelocout);
 			std::ofstream oss(filename);
@@ -2723,6 +2747,19 @@ namespace HMM
 						macroout.close();
 						// Loading in quadrature_point_history
 						read_tensor<dim>(filename, local_quadrature_points_history[q].new_stiff);
+					}
+
+					// Restore stress history
+					sprintf(filename, "%s/restart/lcts.%s.stress", macrostatelocin, cell_id);
+					std::ifstream  macroinstress(filename, std::ios::binary);
+					if (macroinstress.good()){
+						sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id);
+						std::ofstream  macrooutstress(filename,   std::ios::binary);
+						macrooutstress << macroinstress.rdbuf();
+						macroinstress.close();
+						macrooutstress.close();
+						// Loading in quadrature_point_history
+						read_tensor<dim>(filename, local_quadrature_points_history[q].new_stress);
 					}
 
 					// Restore box state history
