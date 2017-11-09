@@ -94,12 +94,10 @@ namespace HMM
 	{
 		SymmetricTensor<2,dim> old_stress;
 		SymmetricTensor<2,dim> new_stress;
-		SymmetricTensor<2,dim> inc_stress;
 		SymmetricTensor<4,dim> old_stiff;
 		SymmetricTensor<4,dim> new_stiff;
 		SymmetricTensor<2,dim> old_strain;
 		SymmetricTensor<2,dim> new_strain;
-		SymmetricTensor<2,dim> inc_strain;
 		SymmetricTensor<2,dim> upd_strain;
 		SymmetricTensor<2,dim> newton_strain;
 		bool to_be_updated;
@@ -335,7 +333,7 @@ namespace HMM
 	// Computes the stress tensor and the complete tanget elastic stiffness tensor
 	template <int dim>
 	void
-	lammps_homogenization (void *lmp, char *location, SymmetricTensor<2,dim>& stresses, SymmetricTensor<4,dim>& stiffnesses, int flinit)
+	lammps_homogenization (void *lmp, char *location, SymmetricTensor<2,dim>& stresses, SymmetricTensor<4,dim>& stiffnesses)
 	{
 		SymmetricTensor<2,2*dim> tmp;
 
@@ -364,10 +362,6 @@ namespace HMM
 
 		// Set strain perturbation amplitude
 		sprintf(cline, "variable up equal %f", strain_nrm); lammps_command(lmp,cline);
-
-		// Set flag to define if stiffness is computed from initial (secant) or current
-		// stresses (tangent)
-		sprintf(cline, "variable flinit equal %d", flinit); lammps_command(lmp,cline);
 
 		// Using a routine based on the example ELASTIC/ to compute the stress and the
 		// stiffness tensors
@@ -557,7 +551,7 @@ namespace HMM
 		if (me == 0) std::cout << "(MD - init - repl " << repl << ") "
 				<< "Homogenization of stiffness and stress using in.elastic.lammps...       " << std::endl;
 		// Compute secant stiffness operator and initial stresses
-		lammps_homogenization<dim>(lmp, location, stress, stiffness, 0);
+		lammps_homogenization<dim>(lmp, location, stress, stiffness);
 
 		// close down LAMMPS
 		delete lmp;
@@ -742,15 +736,8 @@ namespace HMM
 		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
 				<< "Homogenization of stiffness and stress using in.elastic.lammps...       " << std::endl;*/
-		// Loading initial state stresses used to compute the SECANT stiffness
-		for(unsigned int k=0;k<dim;k++)
-			for(unsigned int l=k;l<dim;l++)
-			{
-				sprintf(cline, "variable isig_%d%d equal %.6e", k, l, (-1)*init_stress[k][l]/1.01325e+05);
-				lammps_command(lmp,cline);
-			}
 		// Compute the secant stiffness tensor at the given stress/strain state
-		lammps_homogenization<dim>(lmp, location, stress, stiffness, 0);
+		lammps_homogenization<dim>(lmp, location, stress, stiffness);
 
 		// Cleaning initial offset of stresses
 		stress -= init_stress;
@@ -1065,11 +1052,8 @@ namespace HMM
 					local_quadrature_points_history[q].old_stiff =
 							local_quadrature_points_history[q].new_stiff;
 
-					if (newtonstep_no == 0) local_quadrature_points_history[q].inc_strain = 0.;
-
 					// Strain tensor update
 					local_quadrature_points_history[q].newton_strain = get_strain (displacement_update_grads[q]);
-					local_quadrature_points_history[q].inc_strain += local_quadrature_points_history[q].newton_strain;
 					local_quadrature_points_history[q].new_strain += local_quadrature_points_history[q].newton_strain;
 					local_quadrature_points_history[q].upd_strain += local_quadrature_points_history[q].newton_strain;
 
@@ -1087,13 +1071,6 @@ namespace HMM
 				std::cout << local_quadrature_points_history[0].new_strain[0][0] << " \t" << local_quadrature_points_history[0].new_strain[0][1] << " \t" << local_quadrature_points_history[0].new_strain[0][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[1][0] << " \t" << local_quadrature_points_history[0].new_strain[1][1] << " \t" << local_quadrature_points_history[0].new_strain[1][2] << std::endl;
 				std::cout << local_quadrature_points_history[0].new_strain[2][0] << " \t" << local_quadrature_points_history[0].new_strain[2][1] << " \t" << local_quadrature_points_history[0].new_strain[2][2] << std::endl;
-				std::cout << std::endl;*/
-
-				// For debug...
-				/*std::cout << " Inc Strain Tensor 0 " << std::endl;
-				std::cout << local_quadrature_points_history[0].inc_strain[0][0] << " \t" << local_quadrature_points_history[0].inc_strain[0][1] << " \t" << local_quadrature_points_history[0].inc_strain[0][2] << std::endl;
-				std::cout << local_quadrature_points_history[0].inc_strain[1][0] << " \t" << local_quadrature_points_history[0].inc_strain[1][1] << " \t" << local_quadrature_points_history[0].inc_strain[1][2] << std::endl;
-				std::cout << local_quadrature_points_history[0].inc_strain[2][0] << " \t" << local_quadrature_points_history[0].inc_strain[2][1] << " \t" << local_quadrature_points_history[0].inc_strain[2][2] << std::endl;
 				std::cout << std::endl;*/
 
 				// For debug...
@@ -1231,9 +1208,6 @@ namespace HMM
 
 				for (unsigned int q=0; q<quadrature_formula.size(); ++q)
 				{
-
-					if (newtonstep_no == 0) local_quadrature_points_history[q].inc_stress = 0.;
-
 					if (local_quadrature_points_history[q].to_be_updated){
 						sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id);
 						read_tensor<dim>(filename, local_quadrature_points_history[q].new_stiff);
@@ -1244,17 +1218,10 @@ namespace HMM
 						local_quadrature_points_history[q].upd_strain = 0;
 					}
 					else{
-						// Tangent stiffness computation of the new stress tensor and the stress increment tensor
-						local_quadrature_points_history[q].inc_stress +=
-							local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
-
-						local_quadrature_points_history[q].new_stress +=
-							local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
+						// Secant stiffness computation of the new stress tensor and the stress increment tensor
+						local_quadrature_points_history[q].new_stress =
+							local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].new_strain;
 					}
-
-					// Secant stiffness computation of the new stress tensor
-					//local_quadrature_points_history[q].new_stress =
-					//		local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].new_strain;
 
 					for(unsigned int k=0;k<dim;k++)
 						for(unsigned int l=k;l<dim;l++)
