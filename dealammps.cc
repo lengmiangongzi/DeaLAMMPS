@@ -1208,7 +1208,7 @@ namespace HMM
 			if (cell->is_locally_owned())
 			{
 				SymmetricTensor<2,dim> avg_upd_strain_tensor;
-				SymmetricTensor<2,dim> avg_stress_tensor;
+				//SymmetricTensor<2,dim> avg_stress_tensor;
 
 				PointHistory<dim> *local_quadrature_points_history
 				= reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
@@ -1227,7 +1227,7 @@ namespace HMM
 				char filename[1024];
 
 				avg_upd_strain_tensor = 0.;
-				avg_stress_tensor = 0.;
+				//avg_stress_tensor = 0.;
 
 				for (unsigned int q=0; q<quadrature_formula.size(); ++q)
 				{
@@ -1256,13 +1256,18 @@ namespace HMM
 					//local_quadrature_points_history[q].new_stress =
 					//		local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].new_strain;
 
+					// Write stress tensor for each gauss point
+					sprintf(filename, "%s/last.%s-%d.stress", macrostatelocout, cell_id,q);
+					write_tensor<dim>(filename, local_quadrature_points_history[q].new_stress);
+
+					// Averaging upd_strain over cell
 					for(unsigned int k=0;k<dim;k++)
 						for(unsigned int l=k;l<dim;l++)
 							avg_upd_strain_tensor[k][l] += local_quadrature_points_history[q].upd_strain[k][l];
 
-					for(unsigned int k=0;k<dim;k++)
+					/*for(unsigned int k=0;k<dim;k++)
 						for(unsigned int l=k;l<dim;l++)
-							avg_stress_tensor[k][l] += local_quadrature_points_history[q].new_stress[k][l];
+							avg_stress_tensor[k][l] += local_quadrature_points_history[q].new_stress[k][l];*/
 
 					// Apply rotation of the sample to the new state tensors.
 					// Only needed if the mesh is modified...
@@ -1318,12 +1323,12 @@ namespace HMM
 				write_tensor<dim>(filename, avg_upd_strain_tensor);
 
 				// Write stress tensor
-				for(unsigned int k=0;k<dim;k++)
+				/*for(unsigned int k=0;k<dim;k++)
 					for(unsigned int l=k;l<dim;l++)
 						avg_stress_tensor[k][l] /= quadrature_formula.size();
 
 				sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id);
-				write_tensor<dim>(filename, avg_stress_tensor);
+				write_tensor<dim>(filename, avg_stress_tensor);*/
 
 				// Save strain since update history for later checking...
 //				sprintf(filename, "%s/last.%s.upstrain", macrostatelocout, cell_id);
@@ -2448,14 +2453,17 @@ namespace HMM
 				}
 
 				// Save stress history
-				sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id);
-				std::ifstream  macroinstress(filename, std::ios::binary);
-				if (macroinstress.good()){
-					sprintf(filename, "%s/lcts.%s.stress", macrostatelocres, cell_id);
-					std::ofstream  macrooutstress(filename,   std::ios::binary);
-					macrooutstress << macroinstress.rdbuf();
-					macroinstress.close();
-					macrooutstress.close();
+				for (unsigned int q=0; q<quadrature_formula.size(); ++q)
+				{
+					sprintf(filename, "%s/last.%s-%d.stress", macrostatelocout, cell_id,q);
+					std::ifstream  macroinstress(filename, std::ios::binary);
+					if (macroinstress.good()){
+						sprintf(filename, "%s/lcts.%s-%d.stress", macrostatelocres, cell_id,q);
+						std::ofstream  macrooutstress(filename,   std::ios::binary);
+						macrooutstress << macroinstress.rdbuf();
+						macroinstress.close();
+						macrooutstress.close();
+					}
 				}
 
 				// Save box state history
@@ -2750,10 +2758,10 @@ namespace HMM
 					}
 
 					// Restore stress history
-					sprintf(filename, "%s/restart/lcts.%s.stress", macrostatelocin, cell_id);
+					sprintf(filename, "%s/restart/lcts.%s-%d.stress", macrostatelocin, cell_id,q);
 					std::ifstream  macroinstress(filename, std::ios::binary);
 					if (macroinstress.good()){
-						sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id);
+						sprintf(filename, "%s/last.%s-%d.stress", macrostatelocout, cell_id,q);
 						std::ofstream  macrooutstress(filename,   std::ios::binary);
 						macrooutstress << macroinstress.rdbuf();
 						macroinstress.close();
