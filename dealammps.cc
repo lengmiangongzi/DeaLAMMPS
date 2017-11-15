@@ -1339,7 +1339,7 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values
 	(const double present_timestep, const int timestep_no)
 	{
-		if (timestep_no < 151) velocity = +0.001;
+		if (timestep_no < 201) velocity = +0.001;
 		else velocity = -0.001;
 
 		FEValuesExtractors::Scalar x_component (dim-3);
@@ -2959,7 +2959,6 @@ namespace HMM
 
 				if (lammps_pcolor == (imdrun%n_lammps_batch))
 				{
-
 					SymmetricTensor<2,dim> loc_strain;
 					SymmetricTensor<2,dim> loc_rep_stress;
 
@@ -3177,7 +3176,7 @@ namespace HMM
 				++newtonstep_no;
 				hcout << "    Beginning of timestep: " << timestep_no << " - newton step: " << newtonstep_no << std::flush;
 				hcout << "    Solving FE system..." << std::flush;
-				if(dealii_pcolor==0) fe_problem.solve_linear_problem_CG();
+				if(dealii_pcolor==0) fe_problem.solve_linear_problem_GMRES();
 
 				hcout << "    Updating quadrature point data..." << std::endl;
 
@@ -3509,7 +3508,7 @@ namespace HMM
 		machine_ppn=16;
 
 		// Number of replicas in MD-ensemble
-		nrepl=1;
+		nrepl=5;
 
 		// Setting repositories for input and creating repositories for outputs
 		set_repositories();
@@ -3544,7 +3543,7 @@ namespace HMM
 		// Initialization of time variables
 		present_time = 0;
 		present_timestep = 1;
-		end_time = 300;
+		end_time = 200;
 		timestep_no = 0;
 
 		hcout << " Initiation of the Mesh...       " << std::endl;
