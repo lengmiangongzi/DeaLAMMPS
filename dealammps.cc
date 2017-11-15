@@ -335,7 +335,7 @@ namespace HMM
 	// Computes the stress tensor and the complete tanget elastic stiffness tensor
 	template <int dim>
 	void
-	lammps_homogenization (void *lmp, char *location, SymmetricTensor<2,dim>& stresses, SymmetricTensor<4,dim>& stiffnesses, int flinit)
+	lammps_homogenization (void *lmp, char *location, SymmetricTensor<2,dim>& stresses, SymmetricTensor<4,dim>& stiffnesses)
 	{
 		SymmetricTensor<2,2*dim> tmp;
 
@@ -364,10 +364,6 @@ namespace HMM
 
 		// Set strain perturbation amplitude
 		sprintf(cline, "variable up equal %f", strain_nrm); lammps_command(lmp,cline);
-
-		// Set flag to define if stiffness is computed from initial (secant) or current
-		// stresses (tangent)
-		sprintf(cline, "variable flinit equal %d", flinit); lammps_command(lmp,cline);
 
 		// Using a routine based on the example ELASTIC/ to compute the stress and the
 		// stiffness tensors
@@ -557,7 +553,7 @@ namespace HMM
 		if (me == 0) std::cout << "(MD - init - repl " << repl << ") "
 				<< "Homogenization of stiffness and stress using in.elastic.lammps...       " << std::endl;
 		// Compute secant stiffness operator and initial stresses
-		lammps_homogenization<dim>(lmp, location, stress, stiffness, 0);
+		lammps_homogenization<dim>(lmp, location, stress, stiffness);
 
 		// close down LAMMPS
 		delete lmp;
@@ -742,15 +738,9 @@ namespace HMM
 		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
 				<< "Homogenization of stiffness and stress using in.elastic.lammps...       " << std::endl;*/
-		// Loading initial state stresses used to compute the SECANT stiffness
-		for(unsigned int k=0;k<dim;k++)
-			for(unsigned int l=k;l<dim;l++)
-			{
-				sprintf(cline, "variable isig_%d%d equal %.6e", k, l, (-1)*init_stress[k][l]/1.01325e+05);
-				lammps_command(lmp,cline);
-			}
+
 		// Compute the secant stiffness tensor at the given stress/strain state
-		lammps_homogenization<dim>(lmp, location, stress, stiffness, 0);
+		lammps_homogenization<dim>(lmp, location, stress, stiffness);
 
 		// Cleaning initial offset of stresses
 		stress -= init_stress;
