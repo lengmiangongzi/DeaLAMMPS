@@ -2443,7 +2443,7 @@ namespace HMM
 				macrooutstrain.close();
 
 				// Save stiffness history
-				sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id);
+				/*sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id);
 				std::ifstream  macroin(filename, std::ios::binary);
 				if (macroin.good()){
 					sprintf(filename, "%s/lcts.%s.stiff", macrostatelocres, cell_id);
@@ -2451,7 +2451,7 @@ namespace HMM
 					macroout << macroin.rdbuf();
 					macroin.close();
 					macroout.close();
-				}
+				}*/
 
 				// Save stress history
 				for (unsigned int q=0; q<quadrature_formula.size(); ++q)
@@ -2747,7 +2747,7 @@ namespace HMM
 					}
 
 					// Restore stiffness history
-					sprintf(filename, "%s/restart/lcts.%s.stiff", macrostatelocin, cell_id);
+					/*sprintf(filename, "%s/restart/lcts.%s.stiff", macrostatelocin, cell_id);
 					std::ifstream  macroin(filename, std::ios::binary);
 					if (macroin.good()){
 						sprintf(filename, "%s/last.%s.stiff", macrostatelocout, cell_id);
@@ -2757,7 +2757,7 @@ namespace HMM
 						macroout.close();
 						// Loading in quadrature_point_history
 						read_tensor<dim>(filename, local_quadrature_points_history[q].new_stiff);
-					}
+					}*/
 
 					// Restore stress history
 					sprintf(filename, "%s/restart/lcts.%s-%d.stress", macrostatelocin, cell_id,q);
