@@ -2573,10 +2573,11 @@ namespace HMM
 
 			//triangulation.refine_global (2);
 
-			sprintf(filename, "%s/mesh.tria", macrostatelocout);
+			// Saving triangulation, not usefull now and costly...
+			/*sprintf(filename, "%s/mesh.tria", macrostatelocout);
 			std::ofstream oss(filename);
 			boost::archive::text_oarchive oa(oss, boost::archive::no_header);
-			triangulation.save(oa, 0);
+			triangulation.save(oa, 0);*/
 		}
 
 		dcout << "    Number of active cells:       "
