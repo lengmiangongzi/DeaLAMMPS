@@ -3513,7 +3513,7 @@ namespace HMM
 		machine_ppn=16;
 
 		// Number of replicas in MD-ensemble
-		nrepl=1;
+		nrepl=5;
 
 		// Setting repositories for input and creating repositories for outputs
 		set_repositories();
