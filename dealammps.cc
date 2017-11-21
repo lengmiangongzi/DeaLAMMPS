@@ -893,6 +893,8 @@ namespace HMM
 
 		double 								velocity;
 		std::vector<bool> 					loaded_boundary_dofs;
+		std::vector<bool> 					support_boundary_dofs;
+		std::vector<bool> 					zlock_boundary_dofs;
 
 		double 								ll;
 		double 								fl;
@@ -1350,8 +1352,7 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values
 	(const double present_timestep, const int timestep_no)
 	{
-		if (timestep_no < 201) velocity = +0.001;
-		else velocity = -0.001;
+		velocity = +0.001;
 
 		FEValuesExtractors::Scalar x_component (dim-3);
 		FEValuesExtractors::Scalar y_component (dim-2);
@@ -1360,10 +1361,8 @@ namespace HMM
 
 //		std::vector<bool> loaded_boundary_dofs (dof_handler.n_dofs());
 		loaded_boundary_dofs.resize(dof_handler.n_dofs());
-
-		std::vector<bool> ysupport_boundary_dofs (dof_handler.n_dofs());
-		std::vector<bool> xsupport_boundary_dofs (dof_handler.n_dofs());
-		std::vector<bool> zsupport_boundary_dofs (dof_handler.n_dofs());
+		support_boundary_dofs.resize(dof_handler.n_dofs());
+		zlock_boundary_dofs.resize(dof_handler.n_dofs());
 
 		typename DoFHandler<dim>::active_cell_iterator
 		cell = dof_handler.begin_active(),
@@ -1378,54 +1377,79 @@ namespace HMM
 
 				for (unsigned int c = 0; c < dim; ++c) {
 					loaded_boundary_dofs[cell->vertex_dof_index (v, c)] = false;
-					ysupport_boundary_dofs[cell->vertex_dof_index (v, c)] = false;
-					xsupport_boundary_dofs[cell->vertex_dof_index (v, c)] = false;
-					zsupport_boundary_dofs[cell->vertex_dof_index (v, c)] = false;
+					support_boundary_dofs[cell->vertex_dof_index (v, c)] = false;
+					zlock_boundary_dofs[cell->vertex_dof_index (v, c)] = false;
 				}
 
-
-				component = 1;
 				value = 0.0;
-				if (fabs(cell->vertex(v)(1) - -hh/2.) < eps/3.)
+				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.)
 				{
-					ysupport_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
-					boundary_values.insert(std::pair<types::global_dof_index, double>
-					(cell->vertex_dof_index (v, component), value));
-//					dcout << "right Y support type"
-//						  << " -- dof id: " << cell->vertex_dof_index (v, component)
-//						  << " -- position: " << cell->vertex(v)(0) << " - " << cell->vertex(v)(1) << " - " << cell->vertex(v)(2) << " - " << std::endl;
-				}
-
-				component = 2;
-				value = 0.0;
-				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.
-						/*|| fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.*/)
-				{
-					ysupport_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
-					boundary_values.insert(std::pair<types::global_dof_index, double>
-					(cell->vertex_dof_index (v, component), value));
-				}
-
-				component = 0;
-				value = 0.0;
-				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.
-						/*|| fabs(cell->vertex(v)(0) - +ll/2.) < eps/3.*/)
-				{
-					ysupport_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
-					boundary_values.insert(std::pair<types::global_dof_index, double>
-					(cell->vertex_dof_index (v, component), value));
-				}
-
-				component = 1;
-				value = present_timestep*velocity;
-				if (fabs(cell->vertex(v)(1) - +hh/2.) < eps/3.)
-				{
-					loaded_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
-					boundary_values.insert(std::pair<types::global_dof_index, double>
-					(cell->vertex_dof_index (v, component), value));
+//					component = 2;
+//					zlock_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
+//					boundary_values.insert(std::pair<types::global_dof_index, double>
+//							(cell->vertex_dof_index (v, component), value));
 //					dcout << "Y load type"
 //						  << " -- dof id: " << cell->vertex_dof_index (v, component)
-//						  << " -- position: " << cell->vertex(v)(0) << " - " << cell->vertex(v)(1) << " - " << cell->vertex(v)(2) << " - " << std::endl;
+//						  << " -- position: " << cell->vertex(v)(0) << " - " << cell->vertex(v)(1) << " - " << cell->vertex(v)(2) << std::endl;
+				}
+
+				value = 0.0;
+				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.
+						&& fabs(cell->vertex(v)(1) - -hh/2.) < eps/3.
+						/*&& fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.*/)
+				{
+					component = 0;
+					support_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+					dcout << "Y load type"
+						  << " -- dof id: " << cell->vertex_dof_index (v, component)
+						  << " -- position: " << cell->vertex(v)(0) << " - " << cell->vertex(v)(1) << " - " << cell->vertex(v)(2) << std::endl;
+					component = 1;
+					support_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+//					dcout << "Y load type"
+//						  << " -- dof id: " << cell->vertex_dof_index (v, component)
+//						  << " -- position: " << cell->vertex(v)(0) << " - " << cell->vertex(v)(1) << " - " << cell->vertex(v)(2) << std::endl;
+					component = 2;
+					support_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+//					dcout << "Y load type"
+//						  << " -- dof id: " << cell->vertex_dof_index (v, component)
+//						  << " -- position: " << cell->vertex(v)(0) << " - " << cell->vertex(v)(1) << " - " << cell->vertex(v)(2) << std::endl;
+				}
+
+				//if(timestep_no < 5)
+				if (fabs(cell->vertex(v)(0) - (+ll/2. + timestep_no*velocity)) < eps/3.
+						&& fabs(cell->vertex(v)(1) - +hh/2.) < eps/3.
+						/*&& fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.*/)
+				{
+					value = present_timestep*velocity;
+					component = 0;
+					loaded_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+					dcout << "Y load type"
+						  << " -- dof id: " << cell->vertex_dof_index (v, component)
+						  << " -- position: " << cell->vertex(v)(0) << " - " << cell->vertex(v)(1) << " - " << cell->vertex(v)(2) << std::endl;
+					value = present_timestep*velocity;
+					component = 1;
+					loaded_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+//					dcout << "Y load type"
+//						  << " -- dof id: " << cell->vertex_dof_index (v, component)
+//						  << " -- position: " << cell->vertex(v)(0) << " - " << cell->vertex(v)(1) << " - " << cell->vertex(v)(2) << std::endl;
+					/*value = present_timestep*velocity;
+					component = 2;
+					loaded_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));*/
+//					dcout << "Y load type"
+//						  << " -- dof id: " << cell->vertex_dof_index (v, component)
+//						  << " -- position: " << cell->vertex(v)(0) << " - " << cell->vertex(v)(1) << " - " << cell->vertex(v)(2) << std::endl;
 				}
 			}
 		}
@@ -1590,37 +1614,62 @@ namespace HMM
 		endc = dof_handler.end();
 
 		for ( ; cell != endc; ++cell) {
-			double eps = (cell->minimum_vertex_distance());
 			for (unsigned int v = 0; v < GeometryInfo<3>::vertices_per_cell; ++v) {
 				unsigned int component;
 				double value;
+
 				value = 0.;
 				component = 2;
-				if (fabs(cell->vertex(v)(2) - -bb/2.) < eps/3.
-						/*|| fabs(cell->vertex(v)(2) - +bb/2.) < eps/3.*/)
-					{
-						boundary_values.insert(std::pair<types::global_dof_index, double>
-								(cell->vertex_dof_index (v, component), value));
-					}
+				if (zlock_boundary_dofs[cell->vertex_dof_index (v, component)])
+				{
+//					boundary_values.insert(std::pair<types::global_dof_index, double>
+//							(cell->vertex_dof_index (v, component), value));
+				}
+
+				value = 0.;
 				component = 0;
-				if (fabs(cell->vertex(v)(0) - -ll/2.) < eps/3.
-						/*|| fabs(cell->vertex(v)(0) - +ll/2.) < eps/3.*/)
-					{
-						boundary_values.insert(std::pair<types::global_dof_index, double>
-								(cell->vertex_dof_index (v, component), value));
-					}
+				if (support_boundary_dofs[cell->vertex_dof_index (v, component)])
+				{
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+				}
+				value = 0.;
 				component = 1;
-				if (fabs(cell->vertex(v)(1) - -hh/2.) < eps/3.)
-					{
-						boundary_values.insert(std::pair<types::global_dof_index, double>
-								(cell->vertex_dof_index (v, component), value));
-					}
+				if (support_boundary_dofs[cell->vertex_dof_index (v, component)])
+				{
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+				}
+				value = 0.;
+				component = 2;
+				if (support_boundary_dofs[cell->vertex_dof_index (v, component)])
+				{
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+				}
+
+
+				value = 0.;
+				component = 0;
+				if (loaded_boundary_dofs[cell->vertex_dof_index (v, component)])
+				{
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+				}
+				value = 0.;
 				component = 1;
 				if (loaded_boundary_dofs[cell->vertex_dof_index (v, component)])
-					{
-						boundary_values.insert(std::pair<types::global_dof_index, double>
-								(cell->vertex_dof_index (v, component), value));
-					}
+				{
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+				}
+				value = 0.;
+				component = 2;
+				if (loaded_boundary_dofs[cell->vertex_dof_index (v, component)])
+				{
+					boundary_values.insert(std::pair<types::global_dof_index, double>
+							(cell->vertex_dof_index (v, component), value));
+				}
 			}
 		}
 
@@ -3181,7 +3230,7 @@ namespace HMM
 				++newtonstep_no;
 				hcout << "    Beginning of timestep: " << timestep_no << " - newton step: " << newtonstep_no << std::flush;
 				hcout << "    Solving FE system..." << std::flush;
-				if(dealii_pcolor==0) fe_problem.solve_linear_problem_GMRES();
+				if(dealii_pcolor==0) fe_problem.solve_linear_problem_CG();
 
 				hcout << "    Updating quadrature point data..." << std::endl;
 
