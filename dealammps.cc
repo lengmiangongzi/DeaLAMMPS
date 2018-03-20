@@ -1008,8 +1008,8 @@ namespace HMM
 
 		void make_grid ();
 		void setup_system ();
-		void set_boundary_values (int timestep_no);
-		double assemble_system ();
+		void set_boundary_values (const double present_time, const double present_timestep);
+		double assemble_system (const double present_timestep);
 		void solve_linear_problem_CG ();
 		void solve_linear_problem_GMRES ();
 		void solve_linear_problem_BiCGStab ();
@@ -1030,6 +1030,7 @@ namespace HMM
 		(const Vector<double>& displacement_update, const int timestep_no, const int newtonstep_no, const bool updated_stiffnesses);
 		void update_stress_quadrature_point_history
 		(const Vector<double>& displacement_update, const int timestep_no, const int newtonstep_no);
+		void update_incremental_variables (const double present_timestep);
 
 		void select_specific ();
 		void output_lhistory (const double present_time);
@@ -1043,6 +1044,12 @@ namespace HMM
 		Vector<double> 		     			newton_update_displacement;
 		Vector<double> 		     			incremental_displacement;
 		Vector<double> 		     			displacement;
+		Vector<double> 		     			old_displacement;
+
+		Vector<double> 		     			newton_update_velocity;
+		Vector<double> 		     			incremental_velocity;
+		Vector<double> 		     			velocity;
+		//Vector<double> 		     			old_velocity;
 
 	private:
 		MPI_Comm 							FE_communicator;
@@ -1062,6 +1069,7 @@ namespace HMM
 		std::vector<PointHistory<dim> > 	quadrature_point_history;
 
 		PETScWrappers::MPI::SparseMatrix	system_matrix;
+//		PETScWrappers::MPI::SparseMatrix	system_inverse;
 		PETScWrappers::MPI::Vector      	system_rhs;
 
 		Vector<float> 						error_per_cell;
@@ -1071,7 +1079,7 @@ namespace HMM
 		IndexSet 							locally_relevant_dofs;
 		unsigned int 						n_local_cells;
 
-		double 								inc_dsupport;
+		double 								inc_vsupport;
 		std::vector<bool> 					topsupport_boundary_dofs;
 		std::vector<bool> 					botsupport_boundary_dofs;
 
@@ -1505,9 +1513,20 @@ namespace HMM
 				FE_communicator);
 		system_rhs.reinit (locally_owned_dofs, FE_communicator);
 
+//		system_inverse.reinit (locally_owned_dofs,
+//				locally_owned_dofs,
+//				sparsity_pattern,
+//				FE_communicator);
+
 		newton_update_displacement.reinit (dof_handler.n_dofs());
 		incremental_displacement.reinit (dof_handler.n_dofs());
 		displacement.reinit (dof_handler.n_dofs());
+		old_displacement.reinit (dof_handler.n_dofs());
+		for (unsigned int i=0; i<dof_handler.n_dofs(); ++i) old_displacement(i) = 0.0;
+
+		newton_update_velocity.reinit (dof_handler.n_dofs());
+		incremental_velocity.reinit (dof_handler.n_dofs());
+		velocity.reinit (dof_handler.n_dofs());
 
 		dcout << "    Number of degrees of freedom: "
 				<< dof_handler.n_dofs()
@@ -1844,9 +1863,31 @@ namespace HMM
 	// with boundary conditions correction performed at the end of the
 	// assemble_system() function
 	template <int dim>
-	void FEProblem<dim>::set_boundary_values(int timestep_no)
+	void FEProblem<dim>::set_boundary_values(const double present_time, const double present_timestep)
 	{
-		inc_dsupport = +0.0005;
+
+		double tvel_vsupport=30.0; // target velocity of the boundary m/s-1
+
+		double acc_time=1.0*present_timestep + present_timestep*0.001; // duration during which the boundary accelerates s + slight delta for avoiding numerical error
+		double acc_vsupport=tvel_vsupport/acc_time; // acceleration of the boundary m/s-2
+
+		double tvel_time=1000.0*present_timestep;
+
+		// acceleration of the loading support (reaching aimed velocity)
+		if (present_time<acc_time){
+			dcout << "ACCELERATE!!!" << std::endl;
+			inc_vsupport = acc_vsupport*present_timestep;
+		}
+		// deccelaration of the loading support (return to 0 velocity)
+		else if (present_time>acc_time+tvel_time and present_time<acc_time+tvel_time+acc_time){
+			dcout << "DECCELERATE!!!" << std::endl;
+			inc_vsupport = -1.0*acc_vsupport*present_timestep;
+		}
+		// stationary motion of the loading support
+		else{
+			dcout << "CRUISING!!!" << std::endl;
+			inc_vsupport = 0.0;
+		}
 
 		FEValuesExtractors::Scalar x_component (dim-3);
 		FEValuesExtractors::Scalar y_component (dim-2);
@@ -1909,7 +1950,7 @@ namespace HMM
 					boundary_values.insert(std::pair<types::global_dof_index, double>
 					(cell->vertex_dof_index (v, component), value));
 
-					value = inc_dsupport;
+					value = inc_vsupport;
 					component = 1;
 					topsupport_boundary_dofs[cell->vertex_dof_index (v, component)] = true;
 					boundary_values.insert(std::pair<types::global_dof_index, double>
@@ -1932,13 +1973,13 @@ namespace HMM
 		for (std::map<types::global_dof_index, double>::const_iterator
 				p = boundary_values.begin();
 				p != boundary_values.end(); ++p)
-			incremental_displacement(p->first) = p->second;
+			incremental_velocity(p->first) = p->second;
 	}
 
 
 
 	template <int dim>
-	double FEProblem<dim>::assemble_system ()
+	double FEProblem<dim>::assemble_system (const double present_timestep)
 	{
 		double rhs_residual;
 
@@ -1953,8 +1994,13 @@ namespace HMM
 		const unsigned int   dofs_per_cell = fe.dofs_per_cell;
 		const unsigned int   n_q_points    = quadrature_formula.size();
 
-		FullMatrix<double>   cell_matrix (dofs_per_cell, dofs_per_cell);
-		Vector<double>       cell_rhs (dofs_per_cell);
+		FullMatrix<double>   cell_mass (dofs_per_cell, dofs_per_cell);
+		Vector<double>       cell_force (dofs_per_cell);
+
+		FullMatrix<double>   cell_v_matrix (dofs_per_cell, dofs_per_cell);
+		Vector<double>       cell_v_rhs (dofs_per_cell);
+
+		Vector<double>       vtmp (dofs_per_cell);
 
 		std::vector<types::global_dof_index> local_dof_indices (dofs_per_cell);
 
@@ -1968,36 +2014,43 @@ namespace HMM
 		for (; cell!=endc; ++cell)
 			if (cell->is_locally_owned())
 			{
-				cell_matrix = 0;
-				cell_rhs = 0;
+				cell_mass = 0;
+				cell_force = 0;
+
+				cell_v_matrix = 0;
+				cell_v_rhs = 0;
 
 				fe_values.reinit (cell);
 
 				const PointHistory<dim> *local_quadrature_points_history
 				= reinterpret_cast<PointHistory<dim>*>(cell->user_pointer());
 
-				// Assembly of stiffness matrix
+				// Assembly of mass matrix
 				for (unsigned int i=0; i<dofs_per_cell; ++i)
 					for (unsigned int j=0; j<dofs_per_cell; ++j)
 						for (unsigned int q_point=0; q_point<n_q_points;
 								++q_point)
 						{
-							const SymmetricTensor<4,dim> &new_stiff
-							= local_quadrature_points_history[q_point].new_stiff;
+							const double rho =
+									local_quadrature_points_history[q_point].rho;
 
-							const SymmetricTensor<2,dim>
-							eps_phi_i = get_strain (fe_values, i, q_point),
-							eps_phi_j = get_strain (fe_values, j, q_point);
+							const double
+							phi_i = fe_values.shape_value (i,q_point),
+							phi_j = fe_values.shape_value (j,q_point);
 
-							cell_matrix(i,j)
-							+= (eps_phi_i * new_stiff * eps_phi_j
-									*
-									fe_values.JxW (q_point));
+							// Non-zero value only if same dimension DOF, because
+							// this is normally a scalar product of the shape functions vector
+							int dcorr;
+							if(i%dim==j%dim) dcorr = 1;
+							else dcorr = 0;
+
+							// Lumped mass matrix because the consistent one doesnt work...
+							cell_mass(i,i) // cell_mass(i,j) instead...
+							+= (rho * dcorr * phi_i * phi_j
+									* fe_values.JxW (q_point));
 						}
 
-				body_force.vector_value_list (fe_values.get_quadrature_points(),
-						body_force_values);
-
+				// Assembly of external forces vector
 				for (unsigned int i=0; i<dofs_per_cell; ++i)
 				{
 					const unsigned int
@@ -2012,7 +2065,7 @@ namespace HMM
 						= local_quadrature_points_history[q_point].new_stress;
 
 						// how to handle body forces?
-						cell_rhs(i) += (
+						cell_force(i) += (
 								body_force_values[q_point](component_i) *
 								local_quadrature_points_history[q_point].rho *
 								fe_values.shape_value (i,q_point)
@@ -2026,8 +2079,17 @@ namespace HMM
 
 				cell->get_dof_indices (local_dof_indices);
 
+				// Assemble local matrices for v problem
+				cell_v_matrix = cell_mass;
+
+				//std::cout << "norm matrix " << cell_v_matrix.l1_norm() << " stiffness " << cell_stiffness.l1_norm() << std::endl;
+
+				// Assemble local rhs for v problem
+				cell_v_rhs.add(present_timestep, cell_force);
+
+				// Local to global for u and v problems
 				hanging_node_constraints
-				.distribute_local_to_global(cell_matrix, cell_rhs,
+				.distribute_local_to_global(cell_v_matrix, cell_v_rhs,
 						local_dof_indices,
 						system_matrix, system_rhs);
 			}
@@ -2106,7 +2168,7 @@ namespace HMM
 				tmp,
 				system_rhs,
 				false);
-		newton_update_displacement = tmp;
+		newton_update_velocity = tmp;
 
 		rhs_residual = system_rhs.l2_norm();
 		dcout << "    FE System - norm of rhs is " << rhs_residual
@@ -2118,18 +2180,39 @@ namespace HMM
 
 
 	template <int dim>
+	void FEProblem<dim>::update_incremental_variables (const double present_timestep)
+	{
+		// Displacement newton update is equal to the current velocity multiplied by the timestep length
+		newton_update_displacement.equ(present_timestep, velocity);
+		newton_update_displacement.add(present_timestep, incremental_velocity);
+		newton_update_displacement.add(present_timestep, newton_update_velocity);
+		newton_update_displacement.add(-1.0, incremental_displacement);
+
+		//hcout << "    Upd. Norms: " << fe_problem.newton_update_displacement.l2_norm() << " - " << fe_problem.newton_update_velocity.l2_norm() <<  std::endl;
+
+		//fe_problem.newton_update_displacement.equ(present_timestep, fe_problem.newton_update_velocity);
+
+		const double alpha = determine_step_length();
+		incremental_velocity.add (alpha, newton_update_velocity);
+		incremental_displacement.add (alpha, newton_update_displacement);
+		//hcout << "    Inc. Norms: " << fe_problem.incremental_displacement.l2_norm() << " - " << fe_problem.incremental_velocity.l2_norm() <<  std::endl;
+	}
+
+
+
+	template <int dim>
 	void FEProblem<dim>::solve_linear_problem_CG ()
 	{
 		PETScWrappers::MPI::Vector
 		distributed_newton_update (locally_owned_dofs,FE_communicator);
-		distributed_newton_update = newton_update_displacement;
+		distributed_newton_update = newton_update_velocity;
 
 		// The residual used internally to test solver convergence is
 		// not identical to ours, it probably considers preconditionning.
 		// Therefore, extra precision is required in the solver proportionnaly
 		// to the norm of the system matrix, to reduce sufficiently our residual
 		SolverControl       solver_control (dof_handler.n_dofs(),
-				1e-03/system_matrix.l1_norm());
+				1e-03);
 
 		PETScWrappers::SolverCG cg (solver_control,
 				FE_communicator);
@@ -2140,13 +2223,10 @@ namespace HMM
 		cg.solve (system_matrix, distributed_newton_update, system_rhs,
 				preconditioner);
 
-		newton_update_displacement = distributed_newton_update;
-		hanging_node_constraints.distribute (newton_update_displacement);
+		newton_update_velocity = distributed_newton_update;
+		hanging_node_constraints.distribute (newton_update_velocity);
 
-		const double alpha = determine_step_length();
-		incremental_displacement.add (alpha, newton_update_displacement);
-
-		dcout << "    FE Solver - norm of newton update is " << newton_update_displacement.l2_norm()
+		dcout << "    FE Solver - norm of newton update is " << newton_update_velocity.l2_norm()
 							  << std::endl;
 		dcout << "    FE Solver converged in " << solver_control.last_step()
 				<< " iterations "
@@ -2161,14 +2241,14 @@ namespace HMM
 	{
 		PETScWrappers::MPI::Vector
 		distributed_newton_update (locally_owned_dofs,FE_communicator);
-		distributed_newton_update = newton_update_displacement;
+		distributed_newton_update = newton_update_velocity;
 
 		// The residual used internally to test solver convergence is
 		// not identical to ours, it probably considers preconditionning.
 		// Therefore, extra precision is required in the solver proportionnaly
 		// to the norm of the system matrix, to reduce sufficiently our residual
 		SolverControl       solver_control (dof_handler.n_dofs(),
-				1e-03/system_matrix.l1_norm());
+				1e-03);
 
 		PETScWrappers::SolverGMRES gmres (solver_control,
 				FE_communicator);
@@ -2179,13 +2259,10 @@ namespace HMM
 		gmres.solve (system_matrix, distributed_newton_update, system_rhs,
 				preconditioner);
 
-		newton_update_displacement = distributed_newton_update;
-		hanging_node_constraints.distribute (newton_update_displacement);
+		newton_update_velocity = distributed_newton_update;
+		hanging_node_constraints.distribute (newton_update_velocity);
 
-		const double alpha = determine_step_length();
-		incremental_displacement.add (alpha, newton_update_displacement);
-
-		dcout << "    FE Solver - norm of newton update is " << newton_update_displacement.l2_norm()
+		dcout << "    FE Solver - norm of newton update is " << newton_update_velocity.l2_norm()
 							  << std::endl;
 		dcout << "    FE Solver converged in " << solver_control.last_step()
 				<< " iterations "
@@ -2200,7 +2277,7 @@ namespace HMM
 	{
 		PETScWrappers::MPI::Vector
 		distributed_newton_update (locally_owned_dofs,FE_communicator);
-		distributed_newton_update = newton_update_displacement;
+		distributed_newton_update = newton_update_velocity;
 
 		PETScWrappers::PreconditionBoomerAMG preconditioner;
 		  {
@@ -2215,7 +2292,7 @@ namespace HMM
 		// Therefore, extra precision is required in the solver proportionnaly
 		// to the norm of the system matrix, to reduce sufficiently our residual
 		SolverControl       solver_control (dof_handler.n_dofs(),
-				1e-12/system_matrix.l1_norm());
+				1e-03);
 
 		PETScWrappers::SolverBicgstab bicgs (solver_control,
 				FE_communicator);
@@ -2223,13 +2300,10 @@ namespace HMM
 		bicgs.solve (system_matrix, distributed_newton_update, system_rhs,
 				preconditioner);
 
-		newton_update_displacement = distributed_newton_update;
-		hanging_node_constraints.distribute (newton_update_displacement);
+		newton_update_velocity = distributed_newton_update;
+		hanging_node_constraints.distribute (newton_update_velocity);
 
-		const double alpha = determine_step_length();
-		incremental_displacement.add (alpha, newton_update_displacement);
-
-		dcout << "    FE Solver - norm of newton update is " << newton_update_displacement.l2_norm()
+		dcout << "    FE Solver - norm of newton update is " << newton_update_velocity.l2_norm()
 							  << std::endl;
 		dcout << "    FE Solver converged in " << solver_control.last_step()
 				<< " iterations "
@@ -2244,7 +2318,7 @@ namespace HMM
 	{
 		PETScWrappers::MPI::Vector
 		distributed_newton_update (locally_owned_dofs,FE_communicator);
-		distributed_newton_update = newton_update_displacement;
+		distributed_newton_update = newton_update_velocity;
 
 		SolverControl       solver_control;
 
@@ -2256,13 +2330,10 @@ namespace HMM
 		solver.solve (system_matrix, distributed_newton_update, system_rhs);
 		//system_inverse.vmult(distributed_newton_update, system_rhs);
 
-		newton_update_displacement = distributed_newton_update;
-		hanging_node_constraints.distribute (newton_update_displacement);
+		newton_update_velocity = distributed_newton_update;
+		hanging_node_constraints.distribute (newton_update_velocity);
 
-		const double alpha = determine_step_length();
-		incremental_displacement.add (alpha, newton_update_displacement);
-
-		dcout << "    FE Solver - norm of newton update is " << newton_update_displacement.l2_norm()
+		dcout << "    FE Solver - norm of newton update is " << newton_update_velocity.l2_norm()
 							  << std::endl;
 	}
 
@@ -2336,7 +2407,7 @@ namespace HMM
 		KellyErrorEstimator<dim>::estimate (dof_handler,
 				QGauss<dim-1>(2),
 				typename FunctionMap<dim>::type(),
-				newton_update_displacement,
+				newton_update_velocity,
 				error_per_cell,
 				ComponentMask(),
 				0,
@@ -2697,6 +2768,13 @@ namespace HMM
 					DataOut<dim>::type_dof_data,
 					data_component_interpretation);
 
+			// Output of velocity as a vector
+			std::vector<std::string>  velocity_names (dim, "velocity");
+			data_out.add_data_vector (velocity,
+					velocity_names,
+					DataOut<dim>::type_dof_data,
+					data_component_interpretation);
+
 			// Output of error per cell as a scalar
 			//data_out.add_data_vector (error_per_cell, "error_per_cell");
 
@@ -2917,6 +2995,11 @@ namespace HMM
 			std::ofstream ofile(solution_filename);
 			displacement.block_write(ofile);
 			ofile.close();
+
+			const std::string solution_filename_veloc = (smacrostatelocrestmp + "/" + "lcts.velocity.bin");
+			std::ofstream ofile_veloc(solution_filename_veloc);
+			velocity.block_write(ofile_veloc);
+			ofile_veloc.close();
 		}
 
 
@@ -3047,6 +3130,17 @@ namespace HMM
 						= rotated_new_strain;*/
 					}
 				}
+		}
+
+		// Recovery of the velocity vector
+		sprintf(filename, "%s/restart/lcts.velocity.bin", macrostatelocin);
+		std::ifstream ifile_veloc(filename);
+		if (ifile_veloc.is_open())
+		{
+			dcout << "    ...recovery of the velocity vector... " << std::flush;
+			velocity.block_read(ifile_veloc);
+			dcout << "    velocity norm: " << velocity.l2_norm() << std::endl;
+			ifile_veloc.close();
 		}
 
 		// Opening processor local history file
@@ -3496,7 +3590,7 @@ namespace HMM
 		do
 		{
 			hcout << "  Initial assembling FE system..." << std::flush;
-			if(dealii_pcolor==0) previous_res = fe_problem.assemble_system ();
+			if(dealii_pcolor==0) previous_res = fe_problem.assemble_system (present_timestep);
 			hcout << "  Initial residual: "
 					<< previous_res
 					<< std::endl;
@@ -3508,8 +3602,14 @@ namespace HMM
 				++newtonstep_no;
 				hcout << "    Beginning of timestep: " << timestep_no << " - newton step: " << newtonstep_no << std::flush;
 				hcout << "    Solving FE system..." << std::flush;
-				if(dealii_pcolor==0) fe_problem.solve_linear_problem_CG();
+				if(dealii_pcolor==0){
 
+					// Solving for the update of the increment of velocity
+					fe_problem.solve_linear_problem_CG();
+
+					// Updating incremental variables
+					fe_problem.update_incremental_variables(present_timestep);
+				}
 				MPI_Barrier(world_communicator);
 				hcout << "    Updating quadrature point data..." << std::endl;
 
@@ -3526,7 +3626,7 @@ namespace HMM
 						(fe_problem.newton_update_displacement, timestep_no, newtonstep_no);
 
 				hcout << "    Re-assembling FE system..." << std::flush;
-				if(dealii_pcolor==0) previous_res = fe_problem.assemble_system ();
+				if(dealii_pcolor==0) previous_res = fe_problem.assemble_system (present_timestep);
 				MPI_Barrier(world_communicator);
 
 				// Cleaning temporary files (nanoscale logs and FE/MD data transfer)
@@ -3551,7 +3651,7 @@ namespace HMM
 	void HMMProblem<dim>::do_timestep (FEProblem<dim> &fe_problem)
 	{
 		// Frequencies of output and save
-		int freq_restart_output = 1;
+		int freq_restart_output = 10;
 		int freq_output_results = 1;
 
 		// Updating time variable
@@ -3568,10 +3668,13 @@ namespace HMM
 		// Initialisation of timestep variables
 		newtonstep_no = 0;
 		updated_md = false;
-		if(dealii_pcolor==0) fe_problem.incremental_displacement = 0;
+		if(dealii_pcolor==0) {
+			fe_problem.incremental_velocity = 0;
+			fe_problem.incremental_displacement = 0;
+		}
 
 		// Setting boudary conditions for current timestep
-		if(dealii_pcolor==0) fe_problem.set_boundary_values (timestep_no);
+		if(dealii_pcolor==0) fe_problem.set_boundary_values (present_time, present_timestep);
 
 		// Updating current strains and stresses with the boundary conditions information
 		if(dealii_pcolor==0) fe_problem.update_strain_quadrature_point_history (fe_problem.incremental_displacement, timestep_no, newtonstep_no, updated_md);
@@ -3582,7 +3685,11 @@ namespace HMM
 		solve_timestep (fe_problem);
 
 		// Updating the total displacement and velocity vectors
-		if(dealii_pcolor==0)fe_problem.displacement+=fe_problem.incremental_displacement;
+		if(dealii_pcolor==0){
+			fe_problem.velocity+=fe_problem.incremental_velocity;
+			fe_problem.displacement+=fe_problem.incremental_displacement;
+			fe_problem.old_displacement=fe_problem.displacement;
+		}
 
 		//if(dealii_pcolor==0) fe_problem.error_estimation ();
 
@@ -4037,9 +4144,9 @@ namespace HMM
 		MPI_Barrier(world_communicator);
 
 		// Initialization of time variables
-		present_time = 0;
-		present_timestep = 1;
-		end_time = 200; //200
+		present_timestep = 5.0e-7;
+		present_time = 0.0*present_timestep;
+		end_time = 2000.0*present_timestep; //4000.0 > 66% final strain
 		timestep_no = 0;
 
 		// Initiatilization of the FE problem
