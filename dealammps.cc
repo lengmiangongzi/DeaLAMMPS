@@ -1672,7 +1672,7 @@ namespace HMM
 
 
 				bool cell_to_be_updated = false;
-				//if ((cell->active_cell_index() == 240)) // For debug...
+				//if ((cell->active_cell_index()%100 == 0)) // For debug...
 				if (cell->barycenter()(1) <  +1.0*((lo)/2. - 0.025) && cell->barycenter()(1) > -1.0*((lo)/2. - 0.025))
 				//if (false) // For debug...
 				if (newtonstep_no > 0 && !updated_stiffnesses)
@@ -4221,7 +4221,7 @@ namespace HMM
 
 		// List of name of MD box types
 		mdtype.push_back("g0");
-		//mdtype.push_back("g1");
+		mdtype.push_back("g1");
 		//mdtype.push_back("g2");
 
 		// Number of replicas in MD-ensemble
@@ -4239,9 +4239,9 @@ namespace HMM
 
 		// Initialization of time variables
 		present_timestep = 3.0e-7;
-		present_time = 0.0*present_timestep;
-		end_time = 1000.0*present_timestep; //4000.0 > 66% final strain
 		timestep_no = 0;
+		present_time = timestep_no*present_timestep;
+		end_time = 1000*present_timestep; //4000.0 > 66% final strain
 
 		// Initiatilization of the FE problem
 		hcout << " Initiation of the Finite Element problem...       " << std::endl;
