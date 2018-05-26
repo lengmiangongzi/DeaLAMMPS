@@ -1071,7 +1071,7 @@ namespace HMM
 		void update_strain_quadrature_point_history
 		(const Vector<double>& displacement_update, const int timestep_no, const int newtonstep_no, const bool updated_stiffnesses);
 		void update_stress_quadrature_point_history
-		(const Vector<double>& displacement_update, const int timestep_no, const int newtonstep_no);
+		(const Vector<double>& displacement_update, const int timestep_no, const int newtonstep_no, bool init_ts);
 		void update_incremental_variables (const double present_timestep);
 
 		void select_specific ();
@@ -1766,7 +1766,7 @@ namespace HMM
 
 	template <int dim>
 	void FEProblem<dim>::update_stress_quadrature_point_history
-	(const Vector<double>& displacement_update, const int timestep_no, const int newtonstep_no)
+	(const Vector<double>& displacement_update, const int timestep_no, const int newtonstep_no, bool init_ts)
 	{
 		FEValues<dim> fe_values (fe, quadrature_formula,
 				update_values | update_gradients);
@@ -1828,7 +1828,7 @@ namespace HMM
 
 					if (newtonstep_no == 0) local_quadrature_points_history[q].inc_stress = 0.;
 
-					if (local_quadrature_points_history[q].to_be_updated){
+					if (local_quadrature_points_history[q].to_be_updated and !init_ts){
 
 						// Updating stiffness tensor
 						/*SymmetricTensor<4,dim> stmp_stiff;
@@ -3718,7 +3718,7 @@ namespace HMM
 				MPI_Barrier(world_communicator);
 
 				if(dealii_pcolor==0) fe_problem.update_stress_quadrature_point_history
-						(fe_problem.newton_update_displacement, timestep_no, newtonstep_no);
+						(fe_problem.newton_update_displacement, timestep_no, newtonstep_no, false);
 
 				hcout << "    Re-assembling FE system..." << std::flush;
 				if(dealii_pcolor==0) previous_res = fe_problem.assemble_system (present_timestep, false);
@@ -3772,7 +3772,7 @@ namespace HMM
 
 		// Updating current strains and stresses with the boundary conditions information
 		if(dealii_pcolor==0) fe_problem.update_strain_quadrature_point_history (fe_problem.incremental_displacement, timestep_no, newtonstep_no, updated_md);
-		if(dealii_pcolor==0) fe_problem.update_stress_quadrature_point_history (fe_problem.incremental_displacement, timestep_no, newtonstep_no);
+		if(dealii_pcolor==0) fe_problem.update_stress_quadrature_point_history (fe_problem.incremental_displacement, timestep_no, newtonstep_no, true);
 		MPI_Barrier(world_communicator);
 
 		// Solving iteratively the current timestep
