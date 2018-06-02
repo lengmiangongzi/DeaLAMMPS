@@ -3477,10 +3477,6 @@ namespace HMM
 	template <int dim>
 	void FEProblem<dim>::run ()
 	{
-		// Setting repositories for input and creating repositories for outputs
-		set_repositories();
-		MPI_Barrier(world_communicator);
-
 		dcout << "Building the HMM problem:       " << std::endl;
 
 		// List of name of MD box types
@@ -3490,6 +3486,10 @@ namespace HMM
 
 		// Number of replicas in MD-ensemble
 		nrepl=5;
+
+		// Setting repositories for input and creating repositories for outputs
+		set_repositories();
+		MPI_Barrier(world_communicator);
 
 		// Setup replicas information vector
 		setup_replica_data();
