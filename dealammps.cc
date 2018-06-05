@@ -631,7 +631,8 @@ namespace HMM
 		double              				present_time;
 		double              				present_timestep;
 		double              				end_time;
-		int        							timestep_no;
+		int        					start_timestep;		
+		int						timestep_no;
 		int        							newtonstep_no;
 		bool 								updated_md;
 
@@ -1784,7 +1785,7 @@ namespace HMM
 			char alltime_update_filename[1024];
 			sprintf(alltime_update_filename, "%s/alltime_cellupdates.dat", macrologloc);
 			outfile.open (alltime_update_filename, std::ofstream::app);
-			if(timestep_no==1 && newtonstep_no==1) outfile << "timestep_no,newtonstep_no,cell" << std::endl;
+			if(timestep_no==start_timestep && newtonstep_no==1) outfile << "timestep_no,newtonstep_no,cell" << std::endl;
 			infile.open (update_filename);
 			while (getline(infile, iline)) outfile << timestep_no << "," << newtonstep_no << "," << iline << std::endl;
 			infile.close();
@@ -2626,7 +2627,7 @@ namespace HMM
 			std::ofstream ofile;
 			char fname[1024]; sprintf(fname, "%s/load_deflection.csv", macrologloc);
 
-			if (timestep_no == 1){
+			if (timestep_no == start_timestep){
 				ofile.open (fname);
 				if (ofile.is_open())
 				{
@@ -3014,7 +3015,7 @@ namespace HMM
 		if(timestep_no%freq_output_lhist==0) output_lhistory ();
 
 		// Macroscopic load-displacement to the current test
-		if(timestep_no%freq_output_lddsp==0 or timestep_no==1) output_loaddisp();
+		if(timestep_no%freq_output_lddsp==0 or timestep_no==start_timestep) output_loaddisp();
 
 		// Specific outputs to the current test
 		if(timestep_no%freq_output_spec==0) output_specific ();
@@ -3362,7 +3363,7 @@ namespace HMM
 		do
 		{
 			dcout << "  Initial assembling FE system..." << std::flush;
-			if(timestep_no==1) previous_res = assemble_system (true);
+			if(timestep_no==start_timestep) previous_res = assemble_system (true);
 			else previous_res = assemble_system (false);
 			dcout << "  Initial residual: "
 					<< previous_res
@@ -3502,8 +3503,9 @@ namespace HMM
 		MPI_Barrier(world_communicator);
 
 		// Initialization of time variables
+		start_timestep = 1;
 		present_timestep = 3.0e-7;
-		timestep_no = 0;
+		timestep_no = start_timestep - 1;
 		present_time = timestep_no*present_timestep;
 		end_time = 500*present_timestep; //4000.0 > 66% final strain
 
