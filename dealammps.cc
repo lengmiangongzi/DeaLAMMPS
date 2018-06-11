@@ -1919,10 +1919,10 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values(const double present_time, const double present_timestep)
 	{
 
-		double tvel_vsupport=10000.0; // target velocity of the boundary m/s-1
+		double tvel_vsupport=80.0; // target velocity of the boundary m/s-1
 
 		double acc_time=500.0*present_timestep + present_timestep*0.001; // duration during which the boundary accelerates s + slight delta for avoiding numerical error
-		double acc_vsupport=tvel_vsupport/acc_time; // acceleration of the boundary m/s-2
+		double acc_vsupport=tvel_vsupport*tvel_vsupport/acc_time; // acceleration of the boundary m/s-2
 
 		double tvel_time=0.0*present_timestep;
 
