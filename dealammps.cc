@@ -202,14 +202,17 @@ namespace HMM
 
 	template <int dim>
 	inline
-	void
+	bool
 	read_tensor (char *filename, SymmetricTensor<2,dim> &tensor)
 	{
 		std::ifstream ifile;
+		
+		bool load_ok = false;
 
 		ifile.open (filename);
 		if (ifile.is_open())
 		{
+			load_ok = true;
 			for(unsigned int k=0;k<dim;k++)
 				for(unsigned int l=k;l<dim;l++)
 				{
@@ -220,6 +223,7 @@ namespace HMM
 			ifile.close();
 		}
 		else std::cout << "Unable to open" << filename << " to read it" << std::endl;
+	return load_ok;
 	}
 
 	template <int dim>
@@ -1311,10 +1315,10 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values()
 	{
 
-		double tvel_vsupport=1000.0; // target velocity of the boundary m/s-1
+		double tvel_vsupport=50.0; // target velocity of the boundary m/s-1
 
-		double acc_time=1000.0*present_timestep + present_timestep*0.001; // duration during which the boundary accelerates s + slight delta for avoiding numerical error
-		double acc_vsupport=tvel_vsupport/acc_time; // acceleration of the boundary m/s-2
+		double acc_time=500.0*present_timestep + present_timestep*0.001; // duration during which the boundary accelerates s + slight delta for avoiding numerical error
+		double acc_vsupport=tvel_vsupport*tvel_vsupport/acc_time; // acceleration of the boundary m/s-2
 
 		double tvel_time=0.0*present_timestep;
 
@@ -2149,11 +2153,13 @@ namespace HMM
 						// Updating stress tensor
 						SymmetricTensor<2,dim> stmp_stress;
 						sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id);
-						read_tensor<dim>(filename, stmp_stress);
+						bool load_stress = read_tensor<dim>(filename, stmp_stress);
 
 						// Rotate the output stress wrt the flake angles
-						local_quadrature_points_history[q].new_stress =
+						if (load_stress) local_quadrature_points_history[q].new_stress =
 									rotate_tensor(stmp_stress, transpose(local_quadrature_points_history[q].rotam));
+						else local_quadrature_points_history[q].new_stress +=
+	                                                      0.00*local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
 
 						// Resetting the update strain tensor
 						local_quadrature_points_history[q].upd_strain = 0;
@@ -3508,7 +3514,7 @@ namespace HMM
 
 		// Initialization of time variables
 		start_timestep = 1;
-		present_timestep = 3.0e-7;
+		present_timestep = 1.0e-7;
 		timestep_no = start_timestep - 1;
 		present_time = timestep_no*present_timestep;
 		end_time = 500*present_timestep; //4000.0 > 66% final strain
