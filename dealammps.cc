@@ -202,14 +202,17 @@ namespace HMM
 
 	template <int dim>
 	inline
-	void
+	bool
 	read_tensor (char *filename, SymmetricTensor<2,dim> &tensor)
 	{
 		std::ifstream ifile;
+		
+		bool load_ok = false;
 
 		ifile.open (filename);
 		if (ifile.is_open())
 		{
+			load_ok = true;
 			for(unsigned int k=0;k<dim;k++)
 				for(unsigned int l=k;l<dim;l++)
 				{
@@ -220,6 +223,7 @@ namespace HMM
 			ifile.close();
 		}
 		else std::cout << "Unable to open" << filename << " to read it" << std::endl;
+	return load_ok;
 	}
 
 	template <int dim>
@@ -1672,7 +1676,7 @@ namespace HMM
 		displacement_update_grads (quadrature_formula.size(),
 				std::vector<Tensor<1,dim> >(dim));
 
-		double strain_perturbation = 0.20;
+		double strain_perturbation = 0.00001;
 
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
 
@@ -2127,11 +2131,13 @@ namespace HMM
 						// Updating stress tensor
 						SymmetricTensor<2,dim> stmp_stress;
 						sprintf(filename, "%s/last.%s.stress", macrostatelocout, cell_id);
-						read_tensor<dim>(filename, stmp_stress);
+						bool load_stress = read_tensor<dim>(filename, stmp_stress);
 
 						// Rotate the output stress wrt the flake angles
-						local_quadrature_points_history[q].new_stress =
+						if (load_stress) local_quadrature_points_history[q].new_stress =
 									rotate_tensor(stmp_stress, transpose(local_quadrature_points_history[q].rotam));
+						else local_quadrature_points_history[q].new_stress +=
+	                                                      0.00*local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].newton_strain;
 
 						// Resetting the update strain tensor
 						local_quadrature_points_history[q].upd_strain = 0;
@@ -2652,7 +2658,7 @@ namespace HMM
 						}
 					}
 					ilength = ytop-ybot;
-					ofile << 0 << ", " << 0 << ", " << std::setprecision(16) << ilength << ", " << 0.0 << std::endl;
+					ofile << timestep_no-1 << ", " << present_time << ", " << std::setprecision(16) << ilength << ", " << 0.0 << std::endl;
 					ofile.close();
 				}
 				else std::cout << "Unable to open" << fname << " to write in it" << std::endl;
