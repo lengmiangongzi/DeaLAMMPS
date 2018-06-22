@@ -326,10 +326,11 @@ namespace MD
 
 		// Locations for finding reference LAMMPS files, to store nanostate binary data, and
 		// to place LAMMPS log/dump/temporary restart outputs
-		char location[1024] = "../box";
+		char location[1024];
+    sprintf(location, "%s/../box", std::getenv("APP_DIR"));
 
-        	//char locff[1024]; /*reaxff*/ 
-        	//sprintf(locff, "%s/in/data/ffield.reax.2", stateloc); /*reaxff*/ 
+      		//char locff[1024]; /*reaxff*/ 
+        	//sprintf(locff, "%s/in/data/ffield.reax.2", stateloc); /*reaxff*/
 
 		// Name of nanostate binary files
 		char mdstate[1024];
@@ -381,7 +382,7 @@ namespace MD
 		// Passing location for output as variable
 		sprintf(cline, "variable mdt string %s", mdt.c_str()); lammps_command(lmp,cline);
 		sprintf(cline, "variable loco string %s", qpreplogloc); lammps_command(lmp,cline);
-		//sprintf(cline, "variable locf string %s", locff); lammps_command(lmp,cline); /*reaxff*/ 
+		//sprintf(cline, "variable locf string %s", locff); lammps_command(lmp,cline); /*reaxff*/
 
 		// Setting testing temperature
 		sprintf(cline, "variable tempt equal %f", tempt); lammps_command(lmp,cline);
@@ -406,8 +407,8 @@ namespace MD
 		/*if (me == 0) std::cout << "               "
 				<< "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
 				<< "   ... from previous state data...   " << std::flush;*/
-		//sprintf(mfile, "%s/out/%s", stateloc, initdata); /*reaxff*/ 
-		//sprintf(cline, "read_restart %s", mfile); lammps_command(lmp,cline); /*reaxff*/ 
+		//sprintf(mfile, "%s/out/%s", stateloc, initdata); /*reaxff*/
+		//sprintf(cline, "read_restart %s", mfile); lammps_command(lmp,cline); /*reaxff*/
 
 		// Check the presence of a dump file to restart from
 		sprintf(mfile, "%s/out/%s", stateloc, straindata_last);
@@ -416,7 +417,7 @@ namespace MD
 			/*if (me == 0) std::cout << "  specifically computed." << std::endl;*/
 			ifile.close();
 
-			//sprintf(cline, "rerun %s dump x y z vx vy vz ix iy iz box yes scaled yes wrapped yes format native", mfile); lammps_command(lmp,cline); /*reaxff*/ 
+			//sprintf(cline, "rerun %s dump x y z vx vy vz ix iy iz box yes scaled yes wrapped yes format native", mfile); lammps_command(lmp,cline); /*reaxff*/
 
 			sprintf(cline, "read_restart %s", mfile); lammps_command(lmp,cline); /*opls*/
 
@@ -456,7 +457,7 @@ namespace MD
 				<< "Saving state data...       " << std::endl;*/
 		// Save data to specific file for this quadrature point
 		sprintf(cline, "write_restart %s/out/%s", stateloc, straindata_last); lammps_command(lmp,cline); /*opls*/
-		//sprintf(cline, "write_dump all custom %s/out/%s id type xs ys zs vx vy vz ix iy iz", stateloc, straindata_last); lammps_command(lmp,cline); /*reaxff*/ 
+		//sprintf(cline, "write_dump all custom %s/out/%s id type xs ys zs vx vy vz ix iy iz", stateloc, straindata_last); lammps_command(lmp,cline); /*reaxff*/
 
 		// close down LAMMPS
 		delete lmp;
@@ -469,7 +470,7 @@ namespace MD
 		sprintf(lmparg[4], "%s/log.%s_homogenization", qpreplogloc, mdt.c_str());
 		lmp = new LAMMPS(nargs,lmparg,comm_lammps);
 
-		//sprintf(cline, "variable locf string %s", locff); lammps_command(lmp,cline); /*reaxff*/ 
+		//sprintf(cline, "variable locf string %s", locff); lammps_command(lmp,cline); /*reaxff*/
         	sprintf(cline, "variable loco string %s", qpreplogloc); lammps_command(lmp,cline);
 
 		// Setting testing temperature
@@ -481,10 +482,10 @@ namespace MD
 		lammps_file(lmp,cfile);
 
 		sprintf(mfile, "%s/out/%s", stateloc, initdata);
-		//sprintf(cline, "read_restart %s", mfile); lammps_command(lmp,cline); /*reaxff*/ 
+		//sprintf(cline, "read_restart %s", mfile); lammps_command(lmp,cline); /*reaxff*/
 
 		sprintf(mfile, "%s/out/%s", stateloc, straindata_last);
-		//sprintf(cline, "rerun %s dump x y z vx vy vz ix iy iz box yes scaled yes wrapped yes format native", mfile); lammps_command(lmp,cline); /*reaxff*/ 
+		//sprintf(cline, "rerun %s dump x y z vx vy vz ix iy iz box yes scaled yes wrapped yes format native", mfile); lammps_command(lmp,cline); /*reaxff*/
 		sprintf(cline, "read_restart %s", mfile); lammps_command(lmp,cline); /*opls*/
 
 		sprintf(cline, "variable dts equal %f", dts); lammps_command(lmp,cline);
@@ -550,7 +551,7 @@ namespace MD
 	template <int dim>
 	void MDProblem<dim>::run (char* ctime, char* ccell, const char* cmat, unsigned int repl)
 	{
-		if(this_world_process == 0) std::cout << "Number of processes assigned: " << n_world_processes << std::endl;  
+		if(this_world_process == 0) std::cout << "Number of processes assigned: " << n_world_processes << std::endl;
 
 		SymmetricTensor<2,dim> loc_strain;
 		SymmetricTensor<2,dim> loc_rep_stress;

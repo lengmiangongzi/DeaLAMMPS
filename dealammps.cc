@@ -1307,10 +1307,10 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values()
 	{
 
-		double tvel_vsupport=100.0; // target velocity of the boundary m/s-1
+		double tvel_vsupport=10.0; // target velocity of the boundary m/s-1
 
-		double acc_time=500.0*present_timestep + present_timestep*0.001; // duration during which the boundary accelerates s + slight delta for avoiding numerical error
-		double acc_vsupport=tvel_vsupport/acc_time; // acceleration of the boundary m/s-2
+		double acc_time=1000.0*present_timestep + present_timestep*0.001; // duration during which the boundary accelerates s + slight delta for avoiding numerical error
+		double acc_vsupport=tvel_vsupport*tvel_vsupport/acc_time; // acceleration of the boundary m/s-2
 
 		double tvel_time=0.0*present_timestep;
 
@@ -1847,7 +1847,7 @@ namespace HMM
 					output_file<<"      \"iterate\": [ 1, "<< nrepl+1 <<"], " <<std::endl;
 					output_file<<"      \"execution\": { " <<std::endl;
 					output_file<<"         \"exec\": \"mpirun\", " <<std::endl;
-					output_file<<"         \"args\": [ \"./single_md\", \"" << time_id
+					output_file<<"         \"args\": [ \""<< std::getenv("APP_DIR") <<"/single_md\", \"" << time_id
 							<< "\", \"" << cell_id << "\", \""
 							<< local_quadrature_points_history[0].mat << "\", \"${it}\", \""
 							<< macrostatelocout << "\", \""
@@ -1934,7 +1934,7 @@ namespace HMM
 	void FEProblem<dim>::update_cells_with_molecular_dynamics()
 	{
 		int max_nodes_per_md = 10;
-		int total_node_allocation = 50;
+		int total_node_allocation = 100;
 
 		//char prev_time_id[1024]; sprintf(prev_time_id, "%d-%d", timestep_no, newtonstep_no-1);
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
@@ -3458,7 +3458,7 @@ namespace HMM
 		present_timestep = 1.0e-9;
 		timestep_no = start_timestep - 1;
 		present_time = timestep_no*present_timestep;
-		end_time = 10*present_timestep; //4000.0 > 66% final strain
+		end_time = 2*present_timestep; //4000.0 > 66% final strain
 
 		// Initiatilization of the FE problem
 		dcout << " Initiation of the Finite Element problem...       " << std::endl;
