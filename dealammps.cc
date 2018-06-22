@@ -2074,7 +2074,7 @@ namespace HMM
 							loc_stiffness += loc_rep_stiffness;*/
 
 							SymmetricTensor<2,dim> loc_rep_stress;
-							sprintf(filename, "%s/last.%d.%d.stress", macrostatelocout, cell_id, repl);
+							sprintf(filename, "%s/last.%s.%d.stress", macrostatelocout, cell_id, repl);
 							load_stress = read_tensor<dim>(filename, loc_rep_stress);
 
 							stmp_stress += loc_rep_stress;
@@ -3341,8 +3341,6 @@ namespace HMM
 						(newton_update_displacement);
 				MPI_Barrier(world_communicator);
 
-				dcout << "    Have some stiffnesses been updated in this group of iterations? " << updated_md << std::endl;
-
 				// update the required cells with MD
 				update_cells_with_molecular_dynamics();
 				MPI_Barrier(world_communicator);
@@ -3366,7 +3364,7 @@ namespace HMM
 						<< previous_res
 						<< std::endl;
 			}
-		} while (false /*previous_res>1e-02 and newtonstep_no < 5*/ /*previous_res>1e-02 || updated_md*/);
+		} while (false /*previous_res>1e-02 and newtonstep_no < 5*/ /*previous_res>1e-02*/);
 	}
 
 
