@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)
 
 FIND_PACKAGE(deal.II 8.5 QUIET
-  HINTS /home/plgrid/plgvassaux/opt/dealii-8.5.1_real/
+  HINTS /home/plgrid-groups/plggcompat/Materials/dealii-8.5.0/opt
   )
 IF(NOT ${deal.II_FOUND})
   MESSAGE(FATAL_ERROR "\n"
@@ -26,7 +26,7 @@ DEAL_II_SETUP_TARGET(init_md)
 
 ## Include LAMMPS sources repository
 INCLUDE_DIRECTORIES(
-  /home/plgrid/plgvassaux/source/lammps-17Nov16/src/
+  /home/plgrid-groups/plggcompat/Materials/lammps-17Nov16/src/
   /home/plgrid-groups/plggcompat/HMC/petsc/include/ 
   /home/plgrid-groups/plggcompat/HMC/slepc/include/ 
  )
@@ -36,9 +36,9 @@ INCLUDE_DIRECTORIES(
 #INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 ## Include LAMMPS library shared .so (or static .a)
-TARGET_LINK_LIBRARIES(dealammps /home/plgrid/plgvassaux/source/lammps-17Nov16/src/liblammps.so)
-TARGET_LINK_LIBRARIES(single_md /home/plgrid/plgvassaux/source/lammps-17Nov16/src/liblammps.so)
-TARGET_LINK_LIBRARIES(init_md /home/plgrid/plgvassaux/source/lammps-17Nov16/src/liblammps.so)
+TARGET_LINK_LIBRARIES(dealammps /home/plgrid-groups/plggcompat/Materials/lammps-17Nov16/src/liblammps.so)
+TARGET_LINK_LIBRARIES(single_md /home/plgrid-groups/plggcompat/Materials/lammps-17Nov16/src/liblammps.so)
+TARGET_LINK_LIBRARIES(init_md /home/plgrid-groups/plggcompat/Materials/lammps-17Nov16/src/liblammps.so)
 
 #TARGET_LINK_LIBRARIES(dealammps LINK_PUBLIC ${Boost_LIBRARIES})
 
