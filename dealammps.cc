@@ -2962,7 +2962,7 @@ namespace HMM
 		int freq_output_lhist = 1;
 		int freq_output_lddsp = 1;
 		int freq_output_spec = 1;
-		int freq_output_visu = 10;
+		int freq_output_visu = 1;
 
 		// Output local history by processor
 		if(timestep_no%freq_output_lhist==0) output_lhistory ();
@@ -3374,7 +3374,7 @@ namespace HMM
 	void FEProblem<dim>::do_timestep ()
 	{
 		// Frequencies of output and save
-		int freq_restart_output = 10;
+		int freq_restart_output = 1;
 
 		// Updating time variable
 		present_time += present_timestep;
