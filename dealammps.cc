@@ -687,9 +687,7 @@ namespace HMM
 		double					acceptable_diff_threshold;
 
 		// Finite Element dimensions and boundary conditions
-		double 								ll;
-		double 								hh;
-		double 								bb;
+		double 								lo;
 		double 								inc_vsupport;
 		std::vector<bool> 					topsupport_boundary_dofs;
 		std::vector<bool> 					botsupport_boundary_dofs;
@@ -1324,7 +1322,7 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values()
 	{
 
-		double tvel_vsupport=100.0; // target velocity of the boundary m/s-1
+		double tvel_vsupport=6400.0; // target velocity of the boundary m/s-1
 
 		double acc_time=500.0*present_timestep + present_timestep*0.001; // duration during which the boundary accelerates s + slight delta for avoiding numerical error
 		double acc_vsupport=tvel_vsupport/acc_time; // acceleration of the boundary m/s-2
@@ -1374,7 +1372,7 @@ namespace HMM
 					topsupport_boundary_dofs[cell->vertex_dof_index (v, c)] = false;
 				}
 
-				if (fabs(cell->vertex(v)(1) - -hh/2.) < eps/3.)
+				if (fabs(cell->vertex(v)(1) - -lo/2.) < eps/3.)
 				{
 					value = 0.;
 					component = 0;
@@ -1400,7 +1398,7 @@ namespace HMM
 				}
 
 
-				if (fabs(cell->vertex(v)(1) - +hh/2.) < eps/3.)
+				if (fabs(cell->vertex(v)(1) - +lo/2.) < eps/3.)
 				{
 					value = 0.;
 					component = 0;
@@ -1439,9 +1437,7 @@ namespace HMM
 	template <int dim>
 	void FEProblem<dim>::make_grid ()
 	{
-		ll=0.000050;
-		hh=0.000150;
-		bb=0.000050;
+		lo=0.185;
 
 		char filename[1024];
 		sprintf(filename, "%s/mesh.tria", macrostatelocin);
@@ -1454,20 +1450,15 @@ namespace HMM
 			triangulation.load(ia, 0);
 		}
 		else{
-			dcout << "    Creation of triangulation..." << std::endl;
-			Point<dim> pp1 (-ll/2.,-hh/2.,-bb/2.);
-			Point<dim> pp2 (ll/2.,hh/2.,bb/2.);
-			std::vector< unsigned int > reps (dim);
-			reps[0] = 4; reps[1] = 10; reps[2] = 4;
-			GridGenerator::subdivided_hyper_rectangle(triangulation, reps, pp1, pp2);
-
-			//triangulation.refine_global (1);
-
-			// Saving triangulation, not usefull now and costly...
-			/*sprintf(filename, "%s/mesh.tria", macrostatelocout);
-			std::ofstream oss(filename);
-			boost::archive::text_oarchive oa(oss, boost::archive::no_header);
-			triangulation.save(oa, 0);*/
+			char meshfile[1024];
+			sprintf(meshfile, "%s/dogbone.msh", macrostatelocin);
+			GridIn<dim> gridin;
+			gridin.attach_triangulation(triangulation);
+			std::ifstream fmesh(meshfile);
+			if (fmesh.is_open()){
+				gridin.read_msh(fmesh);
+			}
+			else dcout << "    Cannot find external mesh file... " << std::endl;
 		}
 
 		dcout << "    Number of active cells:       "
@@ -1866,11 +1857,14 @@ namespace HMM
 			sprintf(outhistfname, "%s/last.%d.all_similar_hist", macrostatelocout, histories[i]->get_ID());
 			histories[i]->all_similar_histories_to_file(outhistfname);
 
-			/*sprintf(outhistfname, "%s/%d.%d.all_similar_hist", macrostatelocout, timestep_no, histories[i]->get_ID());
-			histories[i]->all_similar_histories_to_file(outhistfname);*/
+			sprintf(outhistfname, "%s/%d.%d.all_similar_hist", macrostatelocout, timestep_no, histories[i]->get_ID());
+			histories[i]->all_similar_histories_to_file(outhistfname);
 		}
 
-		dcout << "           " << "...computing quadrature points reduced dependencies..." << std::endl;
+		// This part is commented to just investigate similarity of histories without reducing the number of computations
+		dcout << "           " << "...no reduction of the number of simulations to run..." << std::endl;
+		/*dcout << "           " << "...computing quadrature points reduced dependencies..." << std::endl;
+
 		// Use networkx to coarsegrain the strain similarity graph, outputting the final list of cells to update using MD (jobs_to_run.csv),
 		// and where to get the stress results for the cells to be updated (mapping.csv). Script must run on only one rank.
 		MPI_Barrier(world_communicator);
@@ -1894,7 +1888,7 @@ namespace HMM
 			char mappingfname[1024];
 			sprintf(mappingfname, "%s/mapping.csv", macrostatelocout);
 			histories[i]->read_coarsegrain_dependency_mapping(mappingfname);
-		}
+		}*/
 	}
 
 	template <int dim>
@@ -1902,7 +1896,7 @@ namespace HMM
 	{
 		dcout << "        " << "...comparing strain history of quadrature points to be updated..." << std::endl;
 
-		acceptable_diff_threshold = 0.000001;
+		acceptable_diff_threshold = 1.0e20;
 
 		// Fit spline to all histories, and determine similarity graph (over all ranks)
 		if(timestep_no > min_num_steps_before_spline) {
@@ -2525,16 +2519,16 @@ namespace HMM
 	void FEProblem<dim>::select_specific ()
 	{
 		// Some counts
-		int xccells = 0;
-		int yccells = 0;
-		int zccells = 0;
+		int yccells1 = 0;
+		int yccells2 = 0;
+		int yccells3 = 0;
 		std::vector< std::vector<int> > lcmd (mdtype.size());
 
 		// Number of cells to skip of each selection
-		int nskip = 3;
+		int nskip = 1;
 
 		// Maximum number of cells of each material to select per process
-		int ncmat = std::max(1, int(60/n_world_processes));
+		int ncmat = std::max(1, int(100/n_world_processes));
 
 		// Build vector of ids of central bottom and central top cells
 		dcout << "    Cells for global measurements: " << std::endl;
@@ -2544,12 +2538,15 @@ namespace HMM
 		{
 			double eps = (cell->minimum_vertex_distance());
 
-			if ((fabs(cell->barycenter()(1) - hh/2.) < 2.*eps/3. || fabs(cell->barycenter()(1) - -hh/2.) < 2.*eps/3.)
-					&& fabs(cell->barycenter()(0) - eps/2.) < eps/3.
-					&& fabs(cell->barycenter()(2) - eps/2.) < eps/3.)
+			if ((fabs(cell->barycenter()(1) - 0.050/2.) < 2.*eps/3. || fabs(cell->barycenter()(1) - -0.050/2.) < 2.*eps/3.)
+				&& fabs(cell->barycenter()(0) - eps/2.) < eps/3.
+				&& fabs(cell->barycenter()(2) - 0.0) < 3.*eps/3. && cell->barycenter()(2) > 0.0)
 			{
 				lcga.push_back(cell->active_cell_index());
-				dcout << "       force vs. displacement measure cell: " << cell->active_cell_index() << " y: " << cell->barycenter()(1) << std::endl;
+				dcout << "       gauge cell: " << cell->active_cell_index()
+								<< " x: " << cell->barycenter()(0)
+								<< " y: " << cell->barycenter()(1)
+								<< " z: " << cell->barycenter()(2) << std::endl;
 			}
 		}
 
@@ -2564,34 +2561,33 @@ namespace HMM
 				double eps = (cell->minimum_vertex_distance());
 
 				const PointHistory<dim> *local_quadrature_points_history
-							= reinterpret_cast<PointHistory<dim>*>(cell->user_pointer());
+				= reinterpret_cast<PointHistory<dim>*>(cell->user_pointer());
 
-				// with cells in central cross section
-				if (cell->barycenter()(1) <  (hh)/2. && cell->barycenter()(1) >  -((hh)/2.)
+				if (cell->barycenter()(1) <  (lo/3.)/2. && cell->barycenter()(1) >  -((lo/3.)/2.)
 						&& fabs(cell->barycenter()(0) - eps/2.) < eps/3.
 						&& fabs(cell->barycenter()(2) - 0.0) < 2.*eps/3.){
-					yccells++;
-					if(yccells%nskip==0){
+					yccells1++;
+					if(yccells1%(3*nskip)==0){
 						lcis.push_back(cell->active_cell_index());
-						std::cout << "       specific cell - cross section: " << cell->active_cell_index() << " y: " << cell->barycenter()(1) << std::endl;
+						std::cout << "       specific cell: " << cell->active_cell_index() << " y: " << cell->barycenter()(1) << std::endl;
 					}
 				}
-				else if (fabs(cell->barycenter()(0) - eps/2.) >= eps/3.
+				if (fabs(cell->barycenter()(0) - eps/2.) >= eps/3.
 						&& fabs(cell->barycenter()(1) - eps/2.) < eps/3.
 						&& fabs(cell->barycenter()(2) - 0.0) < 2.*eps/3.){
-					xccells++;
-					if(xccells%nskip==0){
+					yccells2++;
+					if(yccells2%(3*nskip)==0){
 						lcis.push_back(cell->active_cell_index());
-						std::cout << "       specific cell - cross section: " << cell->active_cell_index() << " x: " << cell->barycenter()(0) << std::endl;
+						std::cout << "       specific cell: " << cell->active_cell_index() << " y: " << cell->barycenter()(1) << std::endl;
 					}
 				}
-				else if (fabs(cell->barycenter()(2) - eps/2.) >= eps/3.
+				if (fabs(cell->barycenter()(2) - 0.0) >= 2.*eps/3.
 						&& fabs(cell->barycenter()(1) - eps/2.) < eps/3.
 						&& fabs(cell->barycenter()(0) - eps/2.) < eps/3.){
-					zccells++;
-					if(zccells%nskip==0){
+					yccells3++;
+					if(yccells3%(3*nskip)==0){
 						lcis.push_back(cell->active_cell_index());
-						std::cout << "       specific cell - cross section: " << cell->active_cell_index() << " z: " << cell->barycenter()(2) << std::endl;
+						std::cout << "       specific cell: " << cell->active_cell_index() << " y: " << cell->barycenter()(1) << std::endl;
 					}
 				}
 
@@ -3046,8 +3042,8 @@ namespace HMM
 	{
 		int freq_output_lhist = 1;
 		int freq_output_lddsp = 1;
-		int freq_output_spec = 1;
-		int freq_output_visu = 10;
+		int freq_output_spec = 5;
+		int freq_output_visu = 5;
 
 		// Output local history by processor
 		if(timestep_no%freq_output_lhist==0) output_lhistory ();
@@ -3554,7 +3550,7 @@ namespace HMM
 
 		// Initialization of time variables
 		start_timestep = 1;
-		present_timestep = 1.0e-9;
+		present_timestep = 3.0e-7;
 		timestep_no = start_timestep - 1;
 		present_time = timestep_no*present_timestep;
 		end_time = 6*present_timestep; //4000.0 > 66% final strain
