@@ -1322,7 +1322,7 @@ namespace HMM
 	void FEProblem<dim>::set_boundary_values()
 	{
 
-		double tvel_vsupport=6400.0; // target velocity of the boundary m/s-1
+		double tvel_vsupport=500.0; // target velocity of the boundary m/s-1
 
 		double acc_time=500.0*present_timestep + present_timestep*0.001; // duration during which the boundary accelerates s + slight delta for avoiding numerical error
 		double acc_vsupport=tvel_vsupport/acc_time; // acceleration of the boundary m/s-2
@@ -3554,7 +3554,7 @@ namespace HMM
 		present_timestep = 3.0e-7;
 		timestep_no = start_timestep - 1;
 		present_time = timestep_no*present_timestep;
-		end_time = 6*present_timestep; //4000.0 > 66% final strain
+		end_time = 500*present_timestep; //4000.0 > 66% final strain
 
 		// Initiatilization of the FE problem
 		dcout << " Initiation of the Finite Element problem...       " << std::endl;
