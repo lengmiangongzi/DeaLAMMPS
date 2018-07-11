@@ -1753,6 +1753,7 @@ namespace HMM
 
 					bool qp_to_be_updated = false;
 					//if ((cell->active_cell_index()%10==0)) // For debug...
+					//if (cell->barycenter()(1) <  +1.0*((lo)/2. - 0.025) && cell->barycenter()(1) > -1.0*((lo)/2. - 0.025))
 					//if (false) // For debug...
 					if (timestep_no > min_num_steps_before_spline)
 					if (newtonstep_no > 0)
