@@ -560,7 +560,7 @@ namespace HMM
 		void clean_transfer ();
 
 		void restart_system ();
-		void restart_save () const;
+		void restart_save (unsigned int restart_num) const;
 
 		void select_specific ();
 		void output_lhistory ();
@@ -628,14 +628,16 @@ namespace HMM
 		char                                macrostateloc[1024];
 		char                                macrostatelocin[1024];
 		char                                macrostatelocout[1024];
-		char                                macrostatelocres[1024];
+		char                                macrostatelocres0[1024];
+		char                                macrostatelocres1[1024];
 		char                                macrologloc[1024];
 
 		// Directories for the nanoscopic model input, ouput, and restart files
 		char                                nanostateloc[1024];
 		char                                nanostatelocin[1024];
 		char                                nanostatelocout[1024];
-		char                                nanostatelocres[1024];
+		char                                nanostatelocres0[1024];
+		char                                nanostatelocres1[1024];
 		char                                nanologloc[1024];
 		char                                nanologlocsi[1024];
 
@@ -731,13 +733,15 @@ namespace HMM
 		sprintf(macrostateloc, "./macroscale_state"); mkdir(macrostateloc, ACCESSPERMS);
 		sprintf(macrostatelocin, "%s/in", macrostateloc); mkdir(macrostatelocin, ACCESSPERMS);
 		sprintf(macrostatelocout, "%s/out", macrostateloc); mkdir(macrostatelocout, ACCESSPERMS);
-		sprintf(macrostatelocres, "%s/restart", macrostateloc); mkdir(macrostatelocres, ACCESSPERMS);
+		sprintf(macrostatelocres0, "%s/restart0", macrostateloc); mkdir(macrostatelocres0, ACCESSPERMS);
+		sprintf(macrostatelocres1, "%s/restart1", macrostateloc); mkdir(macrostatelocres1, ACCESSPERMS);
 		sprintf(macrologloc, "./macroscale_log"); mkdir(macrologloc, ACCESSPERMS);
 
 		sprintf(nanostateloc, "./nanoscale_state"); mkdir(nanostateloc, ACCESSPERMS);
 		sprintf(nanostatelocin, "%s/in", nanostateloc); mkdir(nanostatelocin, ACCESSPERMS);
 		sprintf(nanostatelocout, "%s/out", nanostateloc); mkdir(nanostatelocout, ACCESSPERMS);
-		sprintf(nanostatelocres, "%s/restart", nanostateloc); mkdir(nanostatelocres, ACCESSPERMS);
+		sprintf(nanostatelocres0, "%s/restart0", nanostateloc); mkdir(nanostatelocres0, ACCESSPERMS);
+		sprintf(nanostatelocres1, "%s/restart1", nanostateloc); mkdir(nanostatelocres1, ACCESSPERMS);
 		sprintf(nanologloc, "./nanoscale_log"); mkdir(nanologloc, ACCESSPERMS);
 		sprintf(nanologlocsi, "%s/spec", nanologloc); mkdir(nanologlocsi, ACCESSPERMS);
 
@@ -3062,10 +3066,20 @@ namespace HMM
 
 
 	template <int dim>
-	void FEProblem<dim>::restart_save () const
+	void FEProblem<dim>::restart_save (unsigned int restart_num) const
 	{
-		char filename[1024];
-
+		char filename[1024], filenameout[1024];
+		char macrostatelocres[1024], nanostatelocres[1024];
+		if(restart_num==0){
+			sprintf(macrostatelocres, "%s", macrostatelocres0);
+			sprintf(nanostatelocres, "%s", nanostatelocres0);
+		}
+		else if(restart_num==1){
+			sprintf(macrostatelocres, "%s", macrostatelocres1);
+			sprintf(nanostatelocres, "%s", nanostatelocres1);
+		}
+		else dcout << "Unexpected restart folder choice!" << std::endl;
+ 
 		// Copy of the solution vector at the end of the presently converged time-step.
 		if (this_world_process==0)
 		{
@@ -3130,7 +3144,19 @@ namespace HMM
 					// Save box state history
 					for(unsigned int repl=1;repl<nrepl+1;repl++)
 					{
+						char command[1024];
 						sprintf(filename, "%s/last.%d.%s_%d.dump", nanostatelocout, local_quadrature_points_history[q].qpid,
+								local_quadrature_points_history[q].mat.c_str(), repl);
+		                                sprintf(filenameout, "%s/lcts.%d.%s_%d.dump", nanostatelocres, local_quadrature_points_history[q].qpid,
+		                                                local_quadrature_points_history[q].mat.c_str(), repl);
+		                                sprintf(command, "cp %s %s 2>/dev/null", filename, filenameout);
+		                                int ret = system(command);
+		                                /*if (ret!=0){
+		                                      std::cerr << "Failed saving one of the nanostate dump file!" << std::endl;
+		                                      exit(1);
+		                                }*/
+
+						/*sprintf(filename, "%s/last.%d.%s_%d.dump", nanostatelocout, local_quadrature_points_history[q].qpid,
 								local_quadrature_points_history[q].mat.c_str(), repl);
 						std::ifstream  nanoin(filename, std::ios::binary);
 						if (nanoin.good()){
@@ -3140,7 +3166,7 @@ namespace HMM
 							nanoout << nanoin.rdbuf();
 							nanoin.close();
 							nanoout.close();
-						}
+						}*/
 					}
 				}
 			}
@@ -3152,7 +3178,7 @@ namespace HMM
 	template <int dim>
 	void FEProblem<dim>::restart_system ()
 	{
-		char filename[1024];
+		char filename[1024], filenameout[1024];
 
 		// Recovery of the solution vector containing total displacements in the
 		// previous simulation and computing the total strain from it.
@@ -3312,7 +3338,19 @@ namespace HMM
 						// Restore box state history
 						for(unsigned int repl=1;repl<nrepl+1;repl++)
 						{
+							char command[1024];
 							sprintf(filename, "%s/restart/lcts.%d.%s_%d.dump", nanostatelocin, local_quadrature_points_history[q].qpid,
+									local_quadrature_points_history[q].mat.c_str(), repl);
+							sprintf(filenameout, "%s/last.%d.%s_%d.dump", nanostatelocout, local_quadrature_points_history[q].qpid,
+									local_quadrature_points_history[q].mat.c_str(), repl);
+			                                sprintf(command, "cp %s %s 2>/dev/null", filename, filenameout);
+                                			int ret = system(command);
+                                			/*if (ret!=0){
+                                        			std::cerr << "Failed restoring one of the nanostate dump file!" << std::endl;
+                                        			exit(1);
+                                			}*/
+
+							/*sprintf(filename, "%s/restart/lcts.%d.%s_%d.dump", nanostatelocin, local_quadrature_points_history[q].qpid,
 									local_quadrature_points_history[q].mat.c_str(), repl);
 							std::ifstream  nanoin(filename, std::ios::binary);
 							if (nanoin.good()){
@@ -3322,7 +3360,7 @@ namespace HMM
 								nanoout << nanoin.rdbuf();
 								nanoin.close();
 								nanoout.close();
-							}
+							}*/
 						}
 					}
 				}
@@ -3508,7 +3546,7 @@ namespace HMM
 		output_results ();
 
 		// Saving files for restart
-		if(timestep_no%freq_restart_output==0) restart_save ();
+		if(timestep_no%freq_restart_output==0) restart_save ((timestep_no/freq_restart_output)%2);
 
 		MPI_Barrier(world_communicator);
 
