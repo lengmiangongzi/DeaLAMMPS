@@ -2067,7 +2067,7 @@ namespace HMM
 
 				sprintf(filename, "%s/list_md_jobs.json", nanostatelocout);
 				sprintf(command,
-						"sbatch -Q -W -A compatpsnc2 -N %d --ntasks-per-node 28 -t 60:00 "
+						"sbatch -p fast -Q -W -A compatpsnc2 -N %d --ntasks-per-node 28 -t 60:00 "
 						"--wrap='/opt/exp_soft/plgrid/qcg-appscripts-eagle/tools/qcg-pilotmanager/qcg-pm-service "
 						"--exschema slurm --file --file-path=%s'",
 						total_node_allocation,
