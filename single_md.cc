@@ -425,7 +425,7 @@ namespace MD
 		else{
 			/*if (me == 0) std::cout << "  initially computed." << std::endl;*/
 
-			//sprintf(mfile, "%s/out/%s", stateloc, initdata); /*opls*/
+			//sprintf(mfile, "%s/%s", statelocout, initdata); /*opls*/
 			//sprintf(cline, "read_restart %s", mfile); lammps_command(lmp,cline); /*opls*/
 
 			sprintf(cline, "print 'initially computed'"); lammps_command(lmp,cline);
