@@ -1753,7 +1753,7 @@ namespace HMM
 
 				bool cell_to_be_updated = false;
 				//if ((cell->active_cell_index()%100 == 0)) // For debug...
-				if (cell->barycenter()(1) <  +1.0*((lo)/2. - 2*0.025) && cell->barycenter()(1) > -1.0*((lo)/2. - 2*0.025))
+				if (cell->barycenter()(1) <  +1.0*((lo)/2. - 1*0.025) && cell->barycenter()(1) > -1.0*((lo)/2. - 1*0.025))
 				//if (cell->active_cell_index() == 527)
 				//if (false) // For debug...
 				if (newtonstep_no > 0)
@@ -3489,7 +3489,7 @@ namespace HMM
 		MPI_Barrier(world_communicator);
 
 		// Initialization of time variables
-		start_timestep = 168;
+		start_timestep = 1;
 		present_timestep = 3.0e-7;
 		timestep_no = start_timestep - 1;
 		present_time = timestep_no*present_timestep;
