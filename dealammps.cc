@@ -3349,6 +3349,11 @@ namespace HMM
                                         			std::cerr << "Failed restoring one of the nanostate dump file!" << std::endl;
                                         			exit(1);
                                 			}*/
+                                                        std::ifstream  nanoin(filename, std::ios::binary);
+                                                        if (nanoin.good()){
+                                                                local_quadrature_points_history[q].to_be_updated = true;
+                                                                nanoin.close();
+                                                        }
 
 							/*sprintf(filename, "%s/restart/lcts.%d.%s_%d.dump", nanostatelocin, local_quadrature_points_history[q].qpid,
 									local_quadrature_points_history[q].mat.c_str(), repl);
