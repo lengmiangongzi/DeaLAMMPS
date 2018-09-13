@@ -591,8 +591,6 @@ namespace HMM
 		(const Vector<double>& displacement_update);
 		void update_incremental_variables ();
 
-		void write_proc_job_list_json(char* filename_out, char* time_id, int max_nodes_per_md);
-		bool concatenate_job_list(char* filename_out);
 		void update_cells_with_molecular_dynamics ();
 
 		void setup_replica_data ();
@@ -1242,6 +1240,12 @@ namespace HMM
 		Assert (history_index == quadrature_point_history.size(),
 				ExcInternalError());
 
+		// Create file with mdtype of qptid to update at timeid
+		std::ofstream omatfile;
+		char mat_local_filename[1024];
+		sprintf(mat_local_filename, "%s/cell_id_mat.%d.list", macrostatelocout, this_world_process);
+		omatfile.open (mat_local_filename);
+
 		// Load the microstructure
 		dcout << "    Loading microstructure..." << std::endl;
 		std::vector<Vector<double> > structure_data;
@@ -1294,7 +1298,46 @@ namespace HMM
 							local_quadrature_points_history[q].rho /= nrepl;
 						}
 				}
+				omatfile << cell->active_cell_index() << " " << local_quadrature_points_history[0].mat << std::endl;
 			}
+
+		// Print file with cell: id - mat matching
+		/*dcout << "writing cell_id_mat.list file..." << std::endl;
+		int size;
+		MPI_Status status;
+		MPI_File fh;
+		sprintf(filename, "%s/cell_id_mat.list", macrostatelocout);
+		MPI_File_open(world_communicator, filename,
+				MPI_MODE_RDWR | MPI_MODE_CREATE,
+				MPI_INFO_NULL, &fh );
+
+		MPI_Comm_size( world_communicator, &size );
+
+        char buf[42];
+        //fprintf(f,"%d \n",i);
+        snprintf(buf,42,"%d \n",this_world_process);
+	    //MPI_File_write_ordered( fh, buf, 1, MPI_INT, &status );
+	    MPI_File_write( fh, buf, 42, MPI_CHAR, &status );
+	    MPI_Barrier(world_communicator);
+	    MPI_File_close( &fh );*/
+
+		if (this_world_process == 0){
+			std::ifstream infile;
+			std::ofstream outfile;
+			std::string iline;
+
+			sprintf(filename, "%s/cell_id_mat.list", macrostatelocout);
+			outfile.open (filename);
+			for (int ip=0; ip<n_world_processes; ip++){
+				char local_filename[1024];
+				sprintf(local_filename, "%s/cell_id_mat.%d.list", macrostatelocout, ip);
+				infile.open (local_filename);
+				while (getline(infile, iline)) outfile << iline << std::endl;
+				infile.close();
+				remove(local_filename);
+			}
+			outfile.close();
+		}
 	}
 
 
@@ -1806,161 +1849,53 @@ namespace HMM
 
 
 
-
-	template <int dim>
-	void FEProblem<dim>::write_proc_job_list_json(char* filename_out, char* time_id, int max_nodes_per_md)
-	{
-
-		std::ofstream output_file(filename_out, std::ios_base::trunc);
-
-		for (typename DoFHandler<dim>::active_cell_iterator
-				cell = dof_handler.begin_active();
-				cell != dof_handler.end(); ++cell)
-			if (cell->is_locally_owned())
-			{
-				PointHistory<dim> *local_quadrature_points_history
-				= reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
-				Assert (local_quadrature_points_history >=
-						&quadrature_point_history.front(),
-						ExcInternalError());
-				Assert (local_quadrature_points_history <
-						&quadrature_point_history.back(),
-						ExcInternalError());
-
-				if(local_quadrature_points_history[0].to_be_updated)
-				{
-					char cell_id[1024]; sprintf(cell_id, "%d", cell->active_cell_index());
-
-					// Create repository containing log files of MD jobs
-					for(unsigned int repl=1;repl<nrepl+1;repl++){
-						char replogloc[1024];
-						sprintf(replogloc, "%s/R%d", nanologloc, repl);
-						char qpreplogloc[1024];
-						sprintf(qpreplogloc, "%s/%s.%s", replogloc, time_id, cell_id);
-						mkdir(qpreplogloc, ACCESSPERMS);
-					}
-
-					// Write json file containing each simulation and its parameters
-					// which are: time_id, cell, mat, repl, macrostatelocout, nanostatelocout, nanologloc, number of cores
-					output_file<<"   { " <<std::endl;
-					output_file<<"      \"name\": \"mdrun_cell"<< cell_id << "_repl${it}\", " <<std::endl;
-					output_file<<"      \"iterate\": [ 1, "<< nrepl+1 <<"], " <<std::endl;
-					output_file<<"      \"execution\": { " <<std::endl;
-					output_file<<"         \"exec\": \"mpirun\", " <<std::endl;
-					output_file<<"         \"args\": [ \""<< std::getenv("APP_DIR") <<"/single_md\", \"" << time_id
-							<< "\", \"" << cell_id << "\", \""
-							<< local_quadrature_points_history[0].mat << "\", \"${it}\", \""
-							<< macrostatelocout << "\", \""
-							<< nanostateloc << "\", \""
-							<< nanologloc << "\"], "
-							<< std::endl;
-					output_file<<"         \"stdout\": \"" << nanologloc <<"/R${it}/" << time_id << "."
-							<< cell_id << "/${jname}.stdout\", " <<std::endl;
-					output_file<<"         \"stderr\": \"" << nanologloc <<"/R${it}/" << time_id << "."
-							<< cell_id << "/${jname}.stderr\"" <<std::endl;
-					output_file<<"      }, " <<std::endl;
-					output_file<<"      \"resources\": { " <<std::endl;
-					output_file<<"         \"numNodes\": { " <<std::endl;
-					output_file<<"            \"min\": "<< 1 << ", " <<std::endl;
-					output_file<<"            \"max\": "<< max_nodes_per_md << "" <<std::endl;
-					output_file<<"         } " <<std::endl;
-					output_file<<"      } " <<std::endl;
-					output_file<<"   }, " <<std::endl;
-				}
-			}
-		output_file.close();
-	}
-
-
-
-
-	template <int dim>
-	bool FEProblem<dim>::concatenate_job_list(char* filename_out)
-	{
-		std::ofstream output_file(filename_out, std::ios_base::trunc);
-
-		char filename[1024];
-
-		output_file<<"["<<std::endl;
-		output_file<<"{"<<std::endl;
-		output_file<<"   \"request\": \"submit\", "<<std::endl;
-		output_file<<"   \"jobs\": [ "<<std::endl;
-
-		// append each proc file content
-		bool empty_list_md_jobs = true;
-		for(int proc=0;proc<n_world_processes;proc++){
-			sprintf(filename, "%s/list_md_jobs.%d.json", nanostatelocout, proc);
-			std::ifstream  prlist(filename);
-			if (prlist.good()){
-				std::string line;
-				// Check if list of the current proc is empty or contains cells to update
-				if (prlist.peek() != std::ifstream::traits_type::eof()){
-					empty_list_md_jobs = false;
-					// Compute number of cells in local history ()
-					while(getline(prlist, line)){
-						output_file << line << std::endl;
-					}
-				}
-				prlist.close();
-			}
-		}
-
-		//std::cout << " is list of job empty? " << empty_list_md_jobs << std::endl;
-
-		// Remove the last useless comma :)
-		long pos = output_file.tellp();
-		output_file.seekp (pos-3);
-		output_file<<""<<std::endl;
-
-		// Append with the control statement
-		output_file<<"   ]"<<std::endl;
-		output_file<<"},"<<std::endl;
-		output_file<<"{"<<std::endl;
-		output_file<<"   \"request\": \"control\", "<<std::endl;
-		output_file<<"   \"command\": \"finishAfterAllTasksDone\" "<<std::endl;
-		output_file<<"}"<<std::endl;
-		output_file<<"]"<<std::endl;
-
-		std::cout << "       Finished writing .json file" << std::endl;
-
-		output_file.close();
-
-		return empty_list_md_jobs;
-	}
-
-
-
 	template <int dim>
 	void FEProblem<dim>::update_cells_with_molecular_dynamics()
 	{
-		int max_nodes_per_md = 10;
-		int total_node_allocation = 100;
+		int total_node_allocation;
 
 		//char prev_time_id[1024]; sprintf(prev_time_id, "%d-%d", timestep_no, newtonstep_no-1);
 		char time_id[1024]; sprintf(time_id, "%d-%d", timestep_no, newtonstep_no);
 
 		char filename[1024], command[1024];
 
-		// Writing the JSON file contents separately for each processor
-		sprintf(filename, "%s/list_md_jobs.%d.json", nanostatelocout, this_world_process);
-		write_proc_job_list_json(filename, time_id, max_nodes_per_md);
-
-		MPI_Barrier(world_communicator);
 
 		if(this_world_process==0){
 
-			int empty_list_md_jobs;
+			int empty_list_md_jobs = false;
+			int ret, rval;
+			std::cout << "        " << "...building optimized job list for pilotjob execution..." << std::endl;
 
-			// Concatenate all the the processors job lists
-			sprintf(filename, "%s/list_md_jobs.json", nanostatelocout);
-			empty_list_md_jobs = concatenate_job_list(filename);
+			sprintf(command, "python %s/optimization_hmm.py %s %d %d %s %s %s",
+					std::getenv("APP_DIR"), macrostatelocout, 1, nrepl, time_id, nanostateloc, nanologloc);
+
+			// Executing the job list optimization script with fscanf to parse the printed values from the python script
+			FILE* in = popen(command, "r");
+			ret = fscanf(in, "%d", &rval);
+			pclose(in);
+			if (ret!=1){
+				std::cerr << "Failed executing the job list optimization script, incorrect number/format of returned values (" << ret << ")" << std::endl;
+				exit(1);
+			}
+
+			// Retrieving output value of the optimization script
+			if (rval==0){
+				empty_list_md_jobs = true;
+			}
+			else if (rval>0){
+				total_node_allocation = rval;
+			}
+			else{
+				std::cerr << "Invalid returned value (" << rval <<") from the job list optimization script." << std::endl;
+				exit(1);
+			}
 
 			if(empty_list_md_jobs){
-				std::cout << "       The .json file is empty, no execution of QCG-PM" << std::endl;
+				std::cout << "          The .json file is empty, no execution of QCG-PM" << std::endl;
 			}
 			else{
 				// Run python script that runs all the MD jobs located in json file
-				std::cout << "       Calling QCG-PM..." << std::endl;
+				std::cout << "        " << "...calling QCG-PM..." << std::endl;
 
 				sprintf(filename, "%s/list_md_jobs.json", nanostatelocout);
 				sprintf(command,
@@ -1968,16 +1903,14 @@ namespace HMM
 						"--wrap='/opt/exp_soft/plgrid/qcg-appscripts-eagle/tools/qcg-pilotmanager/qcg-pm-service "
 						"--exschema slurm --file --file-path=%s'",
 						total_node_allocation,
-						//"/opt/exp_soft/plgrid/qcg-appscripts-eagle/tools/qcg-pilotmanager/qcg-pm-service --exschema slurm --file --file-path=%s",
-						//"/bin/echo %s",
 						filename);
-				int ret = system(command);
+				ret = system(command);
 				if (ret!=0){
 					std::cerr << "Failed completing the MD updates via QCG-PM" << std::endl;
 					exit(1);
 				}
 
-				std::cout << "       Completion signal from QCG-PM received!" << std::endl;
+				std::cout << "        " << "...completion signal from QCG-PM received!" << std::endl;
 			}
 		}
 	}
