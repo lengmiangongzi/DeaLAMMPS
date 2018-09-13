@@ -1899,7 +1899,7 @@ namespace HMM
 
 				sprintf(filename, "%s/list_md_jobs.json", nanostatelocout);
 				sprintf(command,
-						"sbatch -Q -W -A compatpsnc2 -N %d --ntasks-per-node 28 -t 60:00 "
+						"sbatch -p fast -Q -W -A compatpsnc2 -N %d --ntasks-per-node 28 -t 60:00 "
 						"--wrap='/opt/exp_soft/plgrid/qcg-appscripts-eagle/tools/qcg-pilotmanager/qcg-pm-service "
 						"--exschema slurm --file --file-path=%s'",
 						total_node_allocation,
@@ -3168,6 +3168,7 @@ namespace HMM
 									local_quadrature_points_history[0].mat.c_str(), repl);
 							std::ifstream  nanoin(filename, std::ios::binary);
 							if (nanoin.good()){
+                                                                local_quadrature_points_history[q].to_be_updated = true;
 								sprintf(filename, "%s/last.%d.%s_%d.dump", nanostatelocout, cell->active_cell_index(),
 										local_quadrature_points_history[0].mat.c_str(), repl);
 								std::ofstream  nanoout(filename,   std::ios::binary);
