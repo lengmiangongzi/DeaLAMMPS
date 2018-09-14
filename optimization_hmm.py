@@ -180,8 +180,8 @@ if __name__ == '__main__':
             cell_job_dict['execution'] = {}
             cell_job_dict['execution']['exec'] = 'mpirun'
             cell_job_dict['execution']['args'] = [os.environ['APP_DIR']+'/singe_md', cell['id'], cell['mat'], macrostatelocout, nanostateloc, nanologloc]
-            cell_job_dict['execution']['stdout'] = nanologloc+'/R${it}'+time_id+"."+str(cell['id'])+'/${jname}.stdout'
-            cell_job_dict['execution']['stderr'] = nanologloc+'/R${it}'+time_id+"."+str(cell['id'])+'/${jname}.stderr'
+            cell_job_dict['execution']['stdout'] = nanologloc+'/R${it}/'+time_id+"."+str(cell['id'])+'/${jname}.stdout'
+            cell_job_dict['execution']['stderr'] = nanologloc+'/R${it}/'+time_id+"."+str(cell['id'])+'/${jname}.stderr'
             cell_job_dict['resources'] = {}
             cell_job_dict['resources']['numNodes'] = {}
             cell_job_dict['resources']['numNodes']['exact'] = cell['p']
@@ -199,4 +199,4 @@ if __name__ == '__main__':
         f.close()
 
         # Returning the total number of nodes to the main app
-        print(ptot)
+        print(nreplicas*ptot)
