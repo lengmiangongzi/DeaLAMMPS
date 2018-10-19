@@ -182,6 +182,7 @@ namespace HMM
 
 		std::string							md_scripts_directory;
 
+
 	};
 
 
@@ -201,6 +202,7 @@ namespace HMM
 	template <int dim>
 	HMMProblem<dim>::~HMMProblem ()
 	{}
+
 
 
 
@@ -385,6 +387,7 @@ namespace HMM
 
 
 
+
 	template <int dim>
 	void HMMProblem<dim>::do_timestep ()
 	{
@@ -435,7 +438,6 @@ namespace HMM
 
 
 
-
 	template <int dim>
 	void HMMProblem<dim>::run (std::string inputfile)
 	{
@@ -456,7 +458,7 @@ namespace HMM
 
 		// Instantiation of the FE problem
 		if(fe_pcolor==0) fe_problem = new FEProblem<dim> (fe_communicator, fe_pcolor, fe_degree, quadrature_formula);
-    
+
 		MPI_Barrier(world_communicator);
 
 		// Initialization of time variables
@@ -483,7 +485,7 @@ namespace HMM
 										 macrostatelocres, macrologloc,
 										 freq_checkpoint, freq_output_visu, freq_output_lhist,
 										 activate_md_update, mdtype, cg_dir);
-    
+
 		MPI_Barrier(world_communicator);
 
 		// Running the solution algorithm of the FE problem
