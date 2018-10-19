@@ -45,13 +45,6 @@
 #include "headers/fe_problem_hopk.h"
 //#include "headers/fe-spline_problem_hopk.h"
 
-#include "boost/archive/text_oarchive.hpp"
-#include "boost/archive/text_iarchive.hpp"
-#include "boost/property_tree/ptree.hpp"
-#include "boost/property_tree/json_parser.hpp"
-#include "boost/foreach.hpp"
-//#include "boost/filesystem.hpp"
-
 // To avoid conflicts...
 // pointers.h in input.h defines MIN and MAX
 // which are later redefined in petsc headers
@@ -144,16 +137,11 @@ namespace HMM
 		int									fenodes;
 		unsigned int						batch_nnodes_min;
 
-		int									machine_ppn;
-		int									fenodes;
-		int									bnnodes_min;
-
 		ConditionalOStream 					hcout;
 
 		int									start_timestep;
 		int									end_timestep;
 		double              				present_time;
-
 		double              				fe_timestep_length;
 		double              				end_time;
 		int        							timestep;
