@@ -244,7 +244,7 @@ namespace HMM
 		char fnset[1024]; sprintf(fnset, "%s/in.set.lammps", md_scripts_directory.c_str());
 		char fnstrain[1024]; sprintf(fnstrain, "%s/in.strain.lammps", md_scripts_directory.c_str());
 		char fnelastic[1024]; sprintf(fnelastic, "%s/ELASTIC", md_scripts_directory.c_str());
-
+        std::cout<< "The md files directory is "<< md_scripts_directory<< std::endl;
 		if(!file_exists(fnset) || !file_exists(fnstrain) || !file_exists(fnelastic)){
 			std::cerr << "Missing some MD input scripts for executing LAMMPS simulation (in 'box' directory)." << std::endl;
 			exit(1);

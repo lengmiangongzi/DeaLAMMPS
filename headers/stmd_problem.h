@@ -26,7 +26,7 @@
 // Specifically built header files
 #include "md_sim.h"
 #include "read_write.h"
-#include "stmd_sync.h"
+//#include "stmd_sync.h"
 
 namespace HMM
 {

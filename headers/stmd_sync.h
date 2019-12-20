@@ -270,7 +270,7 @@ namespace HMM
 				if(!file_exists(filename)){
 					std::cerr << "Missing data for replica #" << irep+1
 							  << " of material" << mdtype[imd].c_str()
-							  << "." << std::endl;
+                              << "."<< filename << std::endl;
 					exit(1);
 				}
 			}
@@ -299,22 +299,26 @@ namespace HMM
 			    {
 			        mcout << "Invalid JSON replica data input file (" << filename << ")" << std::endl;  // Never gets here
 			    }
-
+                std::cout<< "read json done with file name "<< filename<< std::endl;
 			    // Printing the whole tree of the JSON file
 			    //bptree_print(pt);
 
 				// Load density of given replica of given material
 			    std::string rdensity = bptree_read(pt, "relative_density");
 				replica_data[imd*nrepl+irep].rho = std::stod(rdensity)*1000.;
+                std::cout<< "read json11 done"<< std::endl;
 
 				// Load number of flakes in box
 			    std::string numflakes = bptree_read(pt, "Nsheets");
+                std::cout<< "read json11 done "<< numflakes<< std::endl;
+
 				replica_data[imd*nrepl+irep].nflakes = std::stoi(numflakes);
 
 				/*mcout << "Hi repl: " << replica_data[imd*nrepl+irep].repl
 					  << " - mat: " << replica_data[imd*nrepl+irep].mat
 					  << " - rho: " << replica_data[imd*nrepl+irep].rho
 					  << std::endl;*/
+                std::cout<< "read json22 done"<< std::endl;
 
 				// Load replica orientation (normal to flake plane if composite)
 				if(replica_data[imd*nrepl+irep].nflakes==1){
@@ -328,7 +332,11 @@ namespace HMM
 					nvrep[2]=std::stod(fvcoorz);
 					// Set the rotation matrix from the replica orientation to common
 					// ground FE/MD orientation (arbitrary choose x-direction)
+                    std::cout<< "read json done2222"<< std::endl;
+
 					replica_data[imd*nrepl+irep].rotam=compute_rotation_tensor(nvrep,cg_dir);
+                    std::cout<< "read json done23333"<< std::endl;
+
 				}
 				else{
 					Tensor<2,dim> idmat;
@@ -336,6 +344,8 @@ namespace HMM
 					// Simply fill the rotation matrix with the identity matrix
 					replica_data[imd*nrepl+irep].rotam=idmat;
 				}
+                std::cout<< "read json33 done"<< std::endl;
+
 			}
 	}
 
@@ -386,7 +396,7 @@ namespace HMM
 					read_tensor<dim>(lengthoutputfile[imdrun].c_str(), replica_data[imdrun].init_length);
 				}
 				else{
-					std::cerr << "Missing equilibrated initial length data for material "
+                    std::cerr << "Missing equilibrated initial length data for material: "<< lengthoutputfile[imdrun]<< "   "
 							<< replica_data[imdrun].mat.c_str() << " replica #"
 							<< replica_data[imdrun].repl << std::endl;
 				}
@@ -397,7 +407,7 @@ namespace HMM
 					read_tensor<dim>(stressoutputfile[imdrun].c_str(), replica_data[imdrun].init_stress);
 				}
 				else{
-					std::cerr << "Missing equilibrated initial stress data for material "
+                    std::cerr << "Missing equilibrated initial stress data for material: "<< stressoutputfile[imdrun]
 							<< replica_data[imdrun].mat.c_str() << " replica #"
 							<< replica_data[imdrun].repl << std::endl;
 				}
@@ -408,7 +418,7 @@ namespace HMM
 					read_tensor<dim>(stiffoutputfile[imdrun].c_str(), replica_data[imdrun].init_stiff);
 				}
 				else{
-					std::cerr << "Missing equilibrated initial stiffness data for material "
+                    std::cerr << "Missing equilibrated initial stiffness data for material "<< stiffoutputfile[imdrun].c_str()
 							<< replica_data[imdrun].mat.c_str() << " replica #"
 							<< replica_data[imdrun].repl << std::endl;
 				}
@@ -428,7 +438,7 @@ namespace HMM
 						nanoout.close();
 					}
 					else{
-						std::cerr << "Missing equilibrated initial system for material "
+                        std::cerr << "Missing equilibrated initial system for material "<< systemoutputfile[imdrun]
 								<< replica_data[imdrun].mat.c_str() << " replica #"
 								<< replica_data[imdrun].repl << std::endl;
 					}
@@ -585,7 +595,7 @@ namespace HMM
 					// Executing directly from the current MPI_Communicator (not fault tolerant)
 
 		//MPI_Barrier(mmd_communicator);
-					STMDProblem<3> stmd_problem (md_batch_communicator, md_batch_pcolor);
+                    STMDProblem<3> stmd_problem (md_batch_communicator, md_batch_pcolor);
 
 					stmd_problem.strain(md_simulations[i], approx_md_with_hookes_law);
 				}
@@ -918,7 +928,7 @@ namespace HMM
 			   std::string mdsdir, int fchpt, int fohom, unsigned int bnmin, unsigned int mppn,
 			   std::vector<std::string> mdt, Tensor<1,dim> cgd, unsigned int nr, bool ups,
 				 boost::property_tree::ptree inconfig, bool hookeslaw){
-
+        std::cout<< "init it ~~~"<< std::endl;
 		approx_md_with_hookes_law = hookeslaw;
 
 		input_config = inconfig;
@@ -952,7 +962,11 @@ namespace HMM
 
 		use_pjm_scheduler = ups;
 		restart ();
+        std::cout<< "init it ~~11~"<< std::endl;
+
 		load_replica_generation_data();
+        std::cout<< "init it ~22~~"<< std::endl;
+
 		load_replica_equilibration_data();
 		if (this_mmd_process==0)
 		{	

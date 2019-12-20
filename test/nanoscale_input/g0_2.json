@@ -1,0 +1,35 @@
+{
+  "scale-bridging":{
+    "use pjm scheduler": 0
+  },
+  "molecular dynamics material":{
+    "number of replicas": 2,
+    "list of materials": ["epoxy80"],
+    "rotation common ground vector":[1.0, 0.0, 0.0]
+  },
+  "molecular dynamics parameters":{
+    "temperature": 300.0,
+    "timestep length": 2.0,
+    "strain rate": 1.0e-4,
+    "strain amplitude": 0.2,
+    "number of sampling steps": 100,
+    "number of equilibration steps": 10000,
+    "scripts directory": "./lammps_scripts_opls",
+    "force field": "opls"
+  },
+  "computational resources":{
+    "machine cores per node": 24,
+    "minimum nodes per MD simulation": 1
+  },
+  "directory structure":{
+    "nanoscale input": "./nanoscale input",
+    "nanoscale log": "./initialization_log"
+  },
+  "relative_density":1,
+  "Nsheets": 5,
+  "normal_vector":{
+	"x":1,
+	"y":1,
+	"z":1
+  }
+}

@@ -202,7 +202,7 @@ namespace HMM
 				if(!file_exists(filename)){
 					std::cerr << "Missing data for replica #" << irep+1
 							  << " of material" << mdtype[imd].c_str()
-							  << "." << std::endl;
+                              << "."<< " with filename "<< filename << std::endl;
 					exit(1);
 				}
 			}

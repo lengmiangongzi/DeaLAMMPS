@@ -224,8 +224,8 @@ namespace HMM
 	};
 
 
-	template <int dim>
-			class FEProblem
+    template <int dim>
+            class FEProblem
 			{
 					public:
 							FEProblem (MPI_Comm dcomm, int pcolor, int fe_deg, int quad_for, const int n_world_processes);
