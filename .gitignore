@@ -60,4 +60,5 @@ pbs.*
 
 # Saved data
 saved/
-#test
+test
+test/*

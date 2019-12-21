@@ -417,6 +417,7 @@ namespace HMM
         if(fe_pcolor==0) fe_problem->beginstep(timestep, present_time);
 
         MPI_Barrier(world_communicator);
+        hcout<< "start newTown"<< std::endl;
 
         // Solving iteratively the current timestep
         bool continue_newton = false;
@@ -424,9 +425,11 @@ namespace HMM
         do
         {
             ++newtonstep;
+            hcout<< "newTown 1"<< std::endl;
 
             ScaleBridgingData scale_bridging_data;
             if(fe_pcolor==0) fe_problem->solve(newtonstep, scale_bridging_data);
+            hcout<< "newTown 2"<< std::endl;
 
             share_scale_bridging_data(scale_bridging_data);
 
@@ -434,19 +437,25 @@ namespace HMM
 
             if(mmd_pcolor==0) mmd_problem->update(timestep, present_time, newtonstep, scale_bridging_data);
             MPI_Barrier(world_communicator);
+            hcout<< "newTown 3"<< std::endl;
 
             share_scale_bridging_data(scale_bridging_data);
+            hcout<< "newTown 4"<< std::endl;
 
             if(fe_pcolor==0) continue_newton = fe_problem->check(scale_bridging_data);
+            hcout<< "newTown 6"<< std::endl;
 
             // Share the value of previous_res with processors outside of dealii allocation
             MPI_Bcast(&continue_newton, 1, MPI_C_BOOL, root_fe_process, world_communicator);
+            std::cout<< "one newTwon done"<< std::endl;
+
 
         } while (continue_newton);
 
         if(fe_pcolor==0) fe_problem->endstep();
 
         MPI_Barrier(world_communicator);
+        std::cout<< "one step done"<< std::endl;
     }
 
 
