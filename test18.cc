@@ -52,10 +52,12 @@
 #include <deal.II/numerics/error_estimator.h>
 #include <deal.II/base/symmetric_tensor.h>
 #include <deal.II/grid/filtered_iterator.h>
+#include <deal.II/base/data_out_base.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+
 namespace Step18
 {
   using namespace dealii;
@@ -568,19 +570,24 @@ namespace Step18
     AssertThrow (n_mpi_processes < 1000, ExcNotImplemented());
     std::ofstream output (filename.c_str());
     data_out.write_vtu (output);
+//    DataOutBase::write_vtu();
     if (this_mpi_process==0)
       {
         std::vector<std::string> filenames;
+        static std::vector<std::pair<double,std::string> > times_and_filenames;
+//        times_and_names.push_back (std::pair<double,std::string> (present_time, pvtu_master_filename));
         for (unsigned int i=0; i<n_mpi_processes; ++i)
-          filenames.push_back ("solution-" + Utilities::int_to_string(timestep_no,4)
-                               + "." + Utilities::int_to_string(i,3)
-                               + ".vtu");
+            times_and_filenames.push_back (std::pair<double,std::string> (present_time, "solution-" + Utilities::int_to_string(timestep_no,4)
+                                                                          + "." + Utilities::int_to_string(i,3)
+                                                                          + ".vtu"));
         const std::string
         visit_master_filename = ("solution-" +
                                  Utilities::int_to_string(timestep_no,4) +
                                  ".visit");
         std::ofstream visit_master (visit_master_filename.c_str());
-        data_out.write_visit_record (visit_master, filenames);
+//        data_out.write_visit_record (visit_master, filenames);
+        DataOutBase::write_pvd_record (visit_master, times_and_filenames); // 8.5.0
+
         const std::string
         pvtu_master_filename = ("solution-" +
                                 Utilities::int_to_string(timestep_no,4) +
@@ -590,7 +597,7 @@ namespace Step18
         static std::vector<std::pair<double,std::string> > times_and_names;
         times_and_names.push_back (std::pair<double,std::string> (present_time, pvtu_master_filename));
         std::ofstream pvd_output ("solution.pvd");
-        data_out.write_pvd_record (pvd_output, times_and_names);
+        DataOutBase::write_pvd_record (pvd_output, times_and_names); // 8.5.0
       }
   }
   template <int dim>

@@ -153,7 +153,7 @@ read_tensor (const char *filename, SymmetricTensor<4,dim> &tensor)
 {
 	std::ifstream ifile;
 
-	ifile.open (filename);
+    ifile.open (filename);
 	if (ifile.is_open())
 	{
 		for(unsigned int k=0;k<dim;k++)
@@ -162,9 +162,9 @@ read_tensor (const char *filename, SymmetricTensor<4,dim> &tensor)
 					for(unsigned int n=m;n<dim;n++)
 					{
 						char line[1024];
-						if(ifile.getline(line, sizeof(line)))
-							tensor[k][l][m][n]= std::strtod(line, NULL);
-					}
+                        if(ifile.getline(line, sizeof(line)))
+                            tensor[k][l][m][n]= std::strtod(line, NULL);
+                    }
 		ifile.close();
 	}
 	else std::cout << "Unable to open" << filename << " to read it..." << std::endl;

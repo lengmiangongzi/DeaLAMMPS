@@ -28,9 +28,9 @@ template <int dim>
 class ProblemType {
 public:
     virtual void make_grid(parallel::shared::Triangulation<dim> &triangulation) = 0;
-    virtual void define_boundary_conditions(DoFHandler<dim> &dof_handler) =0;
-    std::map<types::global_dof_index, double> set_boundary_conditions(uint32_t timestep, double dt) {}
-    std::map<types::global_dof_index, double> boundary_conditions_to_zero(uint32_t timestep) {}
+    virtual void define_boundary_conditions(DoFHandler<dim> &dof_handler) = 0;
+    virtual std::map<types::global_dof_index, double> set_boundary_conditions(uint32_t timestep, double dt) = 0;
+    virtual std::map<types::global_dof_index, double> boundary_conditions_to_zero(uint32_t timestep) = 0;
 
     MeshDimensions read_mesh_dimensions(boost::property_tree::ptree input_config) {
         MeshDimensions mesh;
@@ -62,7 +62,6 @@ public:
 
     void make_grid(parallel::shared::Triangulation<dim> &triangulation) {
         mesh = this->read_mesh_dimensions(input_config);
-
         // Generate block with bottom in plane 0,0. Strain applied in z axis
         Point<dim> corner1 (0, 0, 0);
         Point<dim> corner2 (mesh.x, mesh.y, mesh.z);
@@ -73,25 +72,24 @@ public:
 
     void define_boundary_conditions(DoFHandler<dim> &dof_handler) {
         typename DoFHandler<dim>::active_cell_iterator cell;
-
+        unsigned int pointNumber = 0;
         for (cell = dof_handler.begin_active(); cell != dof_handler.end(); ++cell) {
             double eps = cell->minimum_vertex_distance();
             double delta = eps / 10.0;
             for (uint32_t face = 0; face < GeometryInfo<3>::faces_per_cell; ++face) {
                 for (uint32_t vert = 0; vert < GeometryInfo<3>::vertices_per_face; ++vert) {
-
+                    pointNumber++;
                     // Point coords
                     double vertex_z = cell->face(face)->vertex(vert)(2);
-
                     // is vertex at base
-                    if ( abs(vertex_z - 0.0) < delta ) {
+                    if ( std::abs(vertex_z - 0.0) < delta ) {
                         for (uint32_t i = 0; i < dim; i++) {
                             fixed_vertices.push_back( cell->face(face)->vertex_dof_index(vert, i) );
                         }
                     }
 
                     // is vertex on top
-                    if ( abs(vertex_z - mesh.z) < delta) {
+                    if ( std::abs(vertex_z - mesh.z) < delta) {
                         // fix in x,y; load along z axis
                         fixed_vertices.push_back( cell->face(face)->vertex_dof_index(vert, 0) );
                         fixed_vertices.push_back( cell->face(face)->vertex_dof_index(vert, 1) );
@@ -101,6 +99,10 @@ public:
                 }
             }
         }
+        std::sort( fixed_vertices.begin(), fixed_vertices.end() );
+        fixed_vertices.erase( unique( fixed_vertices.begin(), fixed_vertices.end() ), fixed_vertices.end() );
+        std::sort( loaded_vertices.begin(), loaded_vertices.end() );
+        loaded_vertices.erase( unique( loaded_vertices.begin(), loaded_vertices.end() ), loaded_vertices.end() );
     }
 
     std::map<types::global_dof_index, double> set_boundary_conditions(uint32_t timestep, double dt) {
@@ -113,7 +115,6 @@ public:
             vert = fixed_vertices[i];
             boundary_values.insert( std::pair<types::global_dof_index, double> (vert, 0.0) );
         }
-
         // apply constant strain to top
         // need to pass FE solver the velocity increment
         // first step
@@ -125,26 +126,14 @@ public:
         } else {
             acceleration = 0;
         }
-        /*if (timestep == 1){
-                acceleration = mesh.z * strain_rate / dt;
-        }
-        else {
-                double current_time = timestep * dt;
-                double current_length = mesh.z + mesh.z*(current_time * strain_rate);
-                double current_velocity = strain_rate * current_length;
-
-                double prev_time = (timestep - 1) * dt;
-                double prev_length = mesh.z + mesh.z*(prev_time * strain_rate);
-                double prev_velocity = strain_rate * prev_length;
-
-                acceleration = (current_velocity - prev_velocity) / dt;
-        }*/
-        //std::cout << "ACCELERATION " << acceleration << std::endl;
         for (uint32_t i = 0; i < loaded_vertices.size(); i++) {
             vert = loaded_vertices[i];
-            boundary_values.insert( std::pair<types::global_dof_index, double> (vert, acceleration) );
+            std::map<types::global_dof_index, double>::iterator it = boundary_values.find(vert);
+            if (it != boundary_values.end())
+                it->second = acceleration;
+            else
+                boundary_values.insert( std::pair<types::global_dof_index, double> (vert, acceleration) );
         }
-
         return boundary_values;
     }
 
@@ -226,10 +215,10 @@ public:
 
                     // is point on the edge, if so it will be kept stationary
                     double delta = eps / 10.0; // in a grid, this will be small enough that only edges are used
-                    if (   ( abs(vertex_x - mesh.x / 2) < delta )
-                            || ( abs(vertex_x + mesh.x / 2) < delta )
-                            || ( abs(vertex_y - mesh.y / 2) < delta )
-                            || ( abs(vertex_y + mesh.y / 2) < delta ))
+                    if (   ( std::abs(vertex_x - mesh.x / 2) < delta )
+                            || ( std::abs(vertex_x + mesh.x / 2) < delta )
+                            || ( std::abs(vertex_y - mesh.y / 2) < delta )
+                            || ( std::abs(vertex_y + mesh.y / 2) < delta ))
 
                         //if (   vertex_x > ( mesh.x/2 - delta)
                         //    || vertex_x < (-mesh.x/2 + delta)
@@ -300,7 +289,6 @@ private:
     double    timestep_length;
     double    velocity_increment;
 };
-
 }
 
 #endif

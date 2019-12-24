@@ -306,11 +306,9 @@ namespace HMM
 				// Load density of given replica of given material
 			    std::string rdensity = bptree_read(pt, "relative_density");
 				replica_data[imd*nrepl+irep].rho = std::stod(rdensity)*1000.;
-                std::cout<< "read json11 done"<< std::endl;
 
 				// Load number of flakes in box
 			    std::string numflakes = bptree_read(pt, "Nsheets");
-                std::cout<< "read json11 done "<< numflakes<< std::endl;
 
 				replica_data[imd*nrepl+irep].nflakes = std::stoi(numflakes);
 
@@ -318,7 +316,6 @@ namespace HMM
 					  << " - mat: " << replica_data[imd*nrepl+irep].mat
 					  << " - rho: " << replica_data[imd*nrepl+irep].rho
 					  << std::endl;*/
-                std::cout<< "read json22 done"<< std::endl;
 
 				// Load replica orientation (normal to flake plane if composite)
 				if(replica_data[imd*nrepl+irep].nflakes==1){
@@ -332,10 +329,7 @@ namespace HMM
 					nvrep[2]=std::stod(fvcoorz);
 					// Set the rotation matrix from the replica orientation to common
 					// ground FE/MD orientation (arbitrary choose x-direction)
-                    std::cout<< "read json done2222"<< std::endl;
-
 					replica_data[imd*nrepl+irep].rotam=compute_rotation_tensor(nvrep,cg_dir);
-                    std::cout<< "read json done23333"<< std::endl;
 
 				}
 				else{
@@ -344,7 +338,6 @@ namespace HMM
 					// Simply fill the rotation matrix with the identity matrix
 					replica_data[imd*nrepl+irep].rotam=idmat;
 				}
-                std::cout<< "read json33 done"<< std::endl;
 
 			}
 	}
@@ -389,7 +382,6 @@ namespace HMM
 			for(unsigned int irep=0; irep<nrepl; irep++){
 
 				int imdrun=imd*nrepl + (irep);
-
 				// Load replica initial dimensions
 				bool statelength_exists = file_exists(lengthoutputfile[imdrun].c_str());
 				if (statelength_exists){
@@ -407,7 +399,7 @@ namespace HMM
 					read_tensor<dim>(stressoutputfile[imdrun].c_str(), replica_data[imdrun].init_stress);
 				}
 				else{
-                    std::cerr << "Missing equilibrated initial stress data for material: "<< stressoutputfile[imdrun]
+                    std::cerr << "Missing equilibrated initial stress data for material: "<< stressoutputfile[imdrun]<< "    "
 							<< replica_data[imdrun].mat.c_str() << " replica #"
 							<< replica_data[imdrun].repl << std::endl;
 				}
@@ -418,7 +410,7 @@ namespace HMM
 					read_tensor<dim>(stiffoutputfile[imdrun].c_str(), replica_data[imdrun].init_stiff);
 				}
 				else{
-                    std::cerr << "Missing equilibrated initial stiffness data for material "<< stiffoutputfile[imdrun].c_str()
+                    std::cerr << "Missing equilibrated initial stiffness data for material "<< stiffoutputfile[imdrun].c_str()<< "    "
 							<< replica_data[imdrun].mat.c_str() << " replica #"
 							<< replica_data[imdrun].repl << std::endl;
 				}
@@ -438,7 +430,7 @@ namespace HMM
 						nanoout.close();
 					}
 					else{
-                        std::cerr << "Missing equilibrated initial system for material "<< systemoutputfile[imdrun]
+                        std::cerr << "Missing equilibrated initial system for material "<< systemoutputfile[imdrun]<< "    "
 								<< replica_data[imdrun].mat.c_str() << " replica #"
 								<< replica_data[imdrun].repl << std::endl;
 					}
@@ -465,10 +457,10 @@ namespace HMM
 				SymmetricTensor<4,dim> 				cg_initial_rep_stiffness_tensor;
 
 				// Rotate tensor from replica orientation to common ground
-				cg_initial_rep_stiffness_tensor =
-					rotate_tensor(replica_data[imd*nrepl+repl].init_stiff, replica_data[imd*nrepl+repl].rotam);
-
+                cg_initial_rep_stiffness_tensor =
+                    rotate_tensor(replica_data[imd*nrepl+repl].init_stiff, replica_data[imd*nrepl+repl].rotam);
 				// Averaging tensors in the common ground referential
+                // Start from here ~!!!!! Jinzhen
 				initial_stiffness_tensor += cg_initial_rep_stiffness_tensor;
 
 				// Averaging density over replicas
@@ -479,6 +471,7 @@ namespace HMM
 			initial_density /= nrepl;
 
 			char macrofilenameout[1024];
+
 			sprintf(macrofilenameout, "%s/init.%s.stiff", macrostatelocout.c_str(),
 					mdtype[imd].c_str());
 			write_tensor<dim>(macrofilenameout, initial_stiffness_tensor);
@@ -596,10 +589,12 @@ namespace HMM
 
 		//MPI_Barrier(mmd_communicator);
                     STMDProblem<3> stmd_problem (md_batch_communicator, md_batch_pcolor);
-
 					stmd_problem.strain(md_simulations[i], approx_md_with_hookes_law);
+                    mcout<< "run done 1111"<< std::endl;
+
 				}
 		}
+        mcout<< "run done"<< std::endl;
 		mcout << std::endl;
 
 		MPI_Barrier(mmd_communicator);
@@ -928,7 +923,6 @@ namespace HMM
 			   std::string mdsdir, int fchpt, int fohom, unsigned int bnmin, unsigned int mppn,
 			   std::vector<std::string> mdt, Tensor<1,dim> cgd, unsigned int nr, bool ups,
 				 boost::property_tree::ptree inconfig, bool hookeslaw){
-        std::cout<< "init it ~~~"<< std::endl;
 		approx_md_with_hookes_law = hookeslaw;
 
 		input_config = inconfig;
@@ -962,11 +956,7 @@ namespace HMM
 
 		use_pjm_scheduler = ups;
 		restart ();
-        std::cout<< "init it ~~11~"<< std::endl;
-
 		load_replica_generation_data();
-        std::cout<< "init it ~22~~"<< std::endl;
-
 		load_replica_equilibration_data();
 		if (this_mmd_process==0)
 		{	

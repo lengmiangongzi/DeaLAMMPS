@@ -179,7 +179,7 @@ namespace HMM
 			sprintf(cfile, "%s/%s", scriptsloc.c_str(), "in.init.lammps"); lammps_file(lmp,cfile);
 		}
 		else
-		{
+        {
 			mdcout << "(MD - init - type " << cellmat << " - repl " << repl << ") "
 					<< "Reuse of state data...       " << std::endl;
 			// Reload from previously computed initial preparation (minimization and
@@ -348,7 +348,7 @@ namespace HMM
 		lammps_equilibration();
 
 		if(this_md_batch_process == 0)
-		{
+        {
 			write_tensor<dim>(lengthoutputfile.c_str(), loc_rep_length);
 			write_tensor<dim>(stressoutputfile.c_str(), loc_rep_stress);
 			write_tensor<dim>(stiffoutputfile.c_str(), loc_rep_stiff);

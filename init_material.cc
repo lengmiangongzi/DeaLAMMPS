@@ -234,7 +234,7 @@ namespace HMM
 	void EMDProblem<dim>::set_repositories ()
 	{
 		if(!file_exists(nanostatelocin)){
-			std::cerr << "Missing macroscale or nanoscale input directories." << std::endl;
+            std::cerr << "Missing macroscale or nanoscale input directories. :"<< nanostatelocin << std::endl;
 			exit(1);
 		}
 

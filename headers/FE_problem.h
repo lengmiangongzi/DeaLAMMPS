@@ -394,7 +394,7 @@ void FEProblem<dim>::setup_quadrature_point_history () {
         // Reading initial material stiffness tensor
         sprintf(filename, "%s/init.%s.stiff", macrostatelocout.c_str(), mdtype[imd].c_str());
         read_tensor<dim>(filename, stiffness_tensors[imd]);
-
+        dcout<< "from file name "<< filename<< std::endl;
         if (this_FE_process == 0) {
             std::cout << "          * stiffness: " << std::endl;
             printf("           %+.4e %+.4e %+.4e %+.4e %+.4e %+.4e \n", stiffness_tensors[imd][0][0][0][0], stiffness_tensors[imd][0][0][1][1], stiffness_tensors[imd][0][0][2][2],
@@ -816,7 +816,6 @@ double FEProblem<dim>::assemble_system (bool first_assemble) {
                 .distribute_local_to_global(cell_v_rhs,
                                             local_dof_indices, system_rhs);
         }
-
     if (first_assemble) {
         system_matrix.compress(VectorOperation::add);
         mass_matrix.copy_from(system_matrix);
