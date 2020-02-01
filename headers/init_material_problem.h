@@ -141,22 +141,22 @@ namespace HMM
 		sprintf(lmparg[4], "%s/log.heatup_cooldown", qpreplogloc.c_str());
 
 		// Creating LAMMPS instance
-		LAMMPS *lmp = NULL;
+        LAMMPS *lmp = NULL;
 		lmp = new LAMMPS(nargs,lmparg,md_batch_communicator);
 
 		// Setting run parameters
-		sprintf(cline, "variable dts equal %f", md_timestep_length); lammps_command(lmp,cline);
-		sprintf(cline, "variable nsinit equal %d", md_nsteps_equil); lammps_command(lmp,cline);
-
-		// Passing location for input and output as variables
-		sprintf(cline, "variable mdt string %s", cellmat.c_str()); lammps_command(lmp,cline);
-		sprintf(cline, "variable locd string %s", locdata); lammps_command(lmp,cline);
-		sprintf(cline, "variable loco string %s", qpreplogloc.c_str()); lammps_command(lmp,cline);
-
+        sprintf(cline, "variable dts equal %f", md_timestep_length); lammps_command(lmp,cline);
+        sprintf(cline, "variable nsinit equal %d", md_nsteps_equil); lammps_command(lmp,cline);
+        // Passing location for input and output as variables
+        sprintf(cline, "variable mdt string %s", cellmat.c_str()); lammps_command(lmp,cline);
+        sprintf(cline, "variable locd string %s", locdata); lammps_command(lmp,cline);
+        sprintf(cline, "variable loco string %s", qpreplogloc.c_str()); lammps_command(lmp,cline);
+        std::cout<< "lammps iniii "<< md_force_field<< std::endl;
 		if (md_force_field == "reax"){
 			sprintf(cline, "variable locf string %s", locff); /*reaxff*/
 			lammps_command(lmp,cline); /*reaxff*/
 		}
+        std::cout<< "lammps iniii  1 "<< std::endl;
 
 		// Setting general parameters for LAMMPS independentely of what will be
 		// tested on the sample next.
@@ -165,18 +165,21 @@ namespace HMM
 		// Setting testing temperature
 		sprintf(cline, "variable tempt equal %f", md_temperature); lammps_command(lmp,cline);
 		sprintf(cline, "variable sseed equal 1234"); lammps_command(lmp,cline);
-
+        // setting the gewald paramters if no charged atoms is specified-Jinzhen
+//        sprintf(cline, "kspace_modify gewald 0.29"); lammps_command(lmp,cline);
 		// Check if 'init.PE.bin' has been computed already
 		sprintf(sfile, "%s", systemoutputfile.c_str());
 		bool state_exists = file_exists(sfile);
-
+        std::cout<< "lammps iniii  2 "<< state_exists<< "  "<< sfile<< std::endl;
 		if (!state_exists)
 		{
 			mdcout << "(MD - init - type " << cellmat << " - repl " << repl << ") "
 					<< "Compute state data...       " << std::endl;
 			// Compute initialization of the sample which minimizes the free energy,
 			// heat up and finally cool down the sample.
-			sprintf(cfile, "%s/%s", scriptsloc.c_str(), "in.init.lammps"); lammps_file(lmp,cfile);
+            sprintf(cfile, "%s/%s", scriptsloc.c_str(), "in.init.lammps");
+            std::cout<< "lammps iniii  2.1 "<< cfile<< std::endl;
+            lammps_file(lmp,cfile);
 		}
 		else
         {
@@ -185,9 +188,11 @@ namespace HMM
 			// Reload from previously computed initial preparation (minimization and
 			// heatup/cooldown), this option shouldn't remain, as in the first step the
 			// preparation should always be computed.
-			sprintf(cline, "read_restart %s", systemoutputfile.c_str()); lammps_command(lmp,cline);
+            sprintf(cline, "read_restart %s", systemoutputfile.c_str()); lammps_command(lmp,cline);
 		}
-
+        // set default pair_coeff-Jinzhen
+//        sprintf(cline, "pair_coeff * * 1.0 1.0"); lammps_command(lmp,cline);
+        std::cout<< "lammps iniii  2.2 "<< std::endl;
 		// Storing initial dimensions after initiation
 		char lname[1024];
 		sprintf(lname, "lxbox0");
@@ -206,32 +211,49 @@ namespace HMM
 		// Saving nanostate at the end of initiation
 		mdcout << "(MD - init - type " << cellmat << " - repl " << repl << ") "
 				<< "Saving state data...       " << std::endl;
-		sprintf(cline, "write_restart %s", systemoutputfile.c_str()); lammps_command(lmp,cline);
+//        sprintf(cline, "write_restart %s", systemoutputfile.c_str());
+        std::cout<< "lammps iniii  2,5 "<< cline<< std::endl;
 
-		mdcout << "(MD - init - type " << cellmat << " - repl " << repl << ") "
+//        lammps_command(lmp,cline);
+        std::cout<< "done 2.5"<< std::endl;
+        mdcout << "(MD - init - type " << cellmat << " - repl " << repl << ") "
 				<< "Homogenization of stiffness and stress using in.elastic.lammps...       " << std::endl;
-
+        std::cout<< "lammps iniii  3 "<< cline<< std::endl;
 		// Compute secant stiffness operator and initial stresses
-		sprintf(cline, "variable locbe string %s/%s", scriptsloc.c_str(), "ELASTIC");
-		lammps_command(lmp,cline);
+		sprintf(cline, "variable locbe string %s/%s", scriptsloc.c_str(), "ELASTIC");lammps_command(lmp,cline);
+        std::cout<< "lammps iniii  3.1 "<< cline<< std::endl;
 
 		// Set sampling and straining time-lengths
-		sprintf(cline, "variable nssample0 equal %d", md_nsteps_sample); lammps_command(lmp,cline);
-		sprintf(cline, "variable nssample  equal %d", md_nsteps_sample); lammps_command(lmp,cline);
+        sprintf(cline, "variable nssample0 equal %d", md_nsteps_sample);
 
+        std::cout<< "lammps iniii  3.1 "<< cline<< std::endl;
+
+        lammps_command(lmp,cline);
+
+        sprintf(cline, "variable nssample  equal %d", md_nsteps_sample);
+        std::cout<< "lammps iniii  3.2 "<< cline<< std::endl;
+
+        lammps_command(lmp,cline);
+//        // setting the gewald paramters if no charged atoms is specified-Jinzhen
+//        sprintf(cline, "kspace_modify gewald 0.29"); lammps_command(lmp,cline);
 		// number of timesteps for straining
 		int nsstrain = std::ceil(md_strain_ampl/(md_timestep_length*md_strain_rate)/10)*10;
+        std::cout<< "lammps iniii  4 "<< cline<< std::endl;
 
 		// For v_sound_PE = 2000 m/s, l_box=8nm, strain_perturbation=0.005, and dts=2.0fs
 		// the min number of straining steps is 10
-		sprintf(cline, "variable nsstrain  equal %d", nsstrain); lammps_command(lmp,cline);
-
+        sprintf(cline, "variable nsstrain  equal %d", nsstrain);
+        std::cout<< "lammps iniii  4.5 "<< cline<< std::endl;
+        lammps_command(lmp,cline);
 		// Set strain perturbation amplitude
-		sprintf(cline, "variable up equal %f", md_strain_ampl); lammps_command(lmp,cline);
-
+        sprintf(cline, "variable up equal %f", md_strain_ampl);
+        std::cout<< "lammps iniii  4.6 "<< cline<< std::endl;
+        lammps_command(lmp,cline);
 		// Using a routine based on the example ELASTIC/ to compute the stress tensor
 		sprintf(cfile, "%s/%s", scriptsloc.c_str(), "ELASTIC/in.homogenization.lammps");
+        std::cout<< "lammps iniii  4.7 "<< cfile<< std::endl;
 		lammps_file(lmp,cfile);
+        std::cout<< "lammps iniii  5 "<< std::endl;
 
 		// Filling 3x3 stress tensor and conversion from ATM to Pa
 		// Useless at the moment, since it cannot be used in the Newton-Raphson algorithm.
@@ -242,8 +264,12 @@ namespace HMM
 			{
 				char vcoef[1024];
 				sprintf(vcoef, "pp%d%d", k+1, l+1);
+                std::cout<< "lammps iniii  5.5 "<< vcoef<< std::endl;
+
 				loc_rep_stress[k][l] = *((double *) lammps_extract_variable(lmp,vcoef,NULL))*(-1.0)*1.01325e+05;
-			}
+                std::cout<< "lammps iniii  5.5 done"<< std::endl;
+
+            }
 		}
 
 		// Using a routine based on the example ELASTIC/ to compute the stiffness tensor
@@ -251,8 +277,11 @@ namespace HMM
 			for(unsigned int l=k;l<dim;l++)
 			{
 				sprintf(cline, "variable eeps_%d%d equal %.6e", k, l, 0.0);
+                std::cout<< "lammps iniii  5.6 "<< cline<< std::endl;
+
 				lammps_command(lmp,cline);
 			}
+        std::cout<< "lammps iniii  6 "<< state_exists<< std::endl;
 
 		sprintf(cfile, "%s/%s", scriptsloc.c_str(), "ELASTIC/in.modulus.lammps");
 		lammps_file(lmp,cfile);
@@ -345,7 +374,10 @@ namespace HMM
 		// microstructure and applying the complete new_strain or starting from
 		// the microstructure at the old_strain and applying the difference between
 		// the new_ and _old_strains, returns the new_stress state.
+        std::cout<< "<<<<<<<<<<<start lammps_equilibration>>>>>>>>>>>>>>>"<< std::endl;
+
 		lammps_equilibration();
+        std::cout<< "<<<<<<<<<<<end lammps_equilibration>>>>>>>>>>>>>>>"<< std::endl;
 
 		if(this_md_batch_process == 0)
         {

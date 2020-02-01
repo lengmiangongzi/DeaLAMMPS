@@ -172,8 +172,8 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
         sprintf(cline, "read_restart %s", initdata);
         std::cout<< "command 1 "<< cline<< std::endl;
         lammps_command(lmp, cline);
-        std::cout<< "command 1 "<< cline<< std::endl;
         sprintf(cline, "print 'initially computed'");
+        std::cout<< "command 1 "<< cline<< std::endl;
         lammps_command(lmp, cline);
     }
     std::cout<< "<<<<<<<<<<<<<<<<<<<<00>>>>>>>>>>>>>>>>>>>>>>"<<std::endl;
