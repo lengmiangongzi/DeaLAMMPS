@@ -1,0 +1,458 @@
+LAMMPS (17 Nov 2016)
+variable mdt string 0
+variable loco string /home/jinzhen/projects/SCEMa/examples/test1/nanoscale_log/tmp/2-1.1.0_1
+variable locs string ./lammps_scripts_sisw
+variable tempt equal 0.010000
+# This file is for a LAMMPS simulation created by James Suter
+# The system is polyethane, using the CVFF forcefield
+# the simulation will heat up to 500K, cooldown to 200K and then perform unixial stretching in the x direction
+
+##  This script should be just run once at the beginning to provide the initial
+##  reference testing box, which will the be evolved using the in.lammps.strain
+##  input file.
+
+## Should we optimize the lammps call depending on the computer setup?
+## suffix OMP
+
+#  Setting units convention for the rest of the file
+units           real            # default
+
+#  Setting variables/attributes associated with each atom: charge, bonds, angles,
+#  dihedrals, impropers (full)
+atom_style      full
+
+#  Setting the dimension of the simulation
+dimension       3               # default
+
+#  Setting boundary types in each dimension (periodic)
+boundary        p p p
+
+# Choose potential
+pair_style	sw
+
+# Setup neighbor style
+neighbor 1.0 nsq
+neigh_modify once no every 1 delay 0 check yes
+read_restart /home/jinzhen/projects/SCEMa/examples/test1/nanoscale_output/init.g0_1.bin
+  triclinic box = (-0.000949778 -0.00142467 -0.00189956) to (10.8609 16.2914 21.7219) with tilt (0 0 0)
+  1 by 1 by 1 MPI processor grid
+  192 atoms
+print 'initially computed'
+initially computed
+variable ll1 equal lx
+variable ll2 equal ly
+variable ll3 equal lz
+variable dts equal 0.002000
+variable nts equal 9930
+variable ceeps_00 equal -5.376883e-05
+variable ceeps_01 equal 1.527680e-07
+variable ceeps_02 equal -2.046634e-05
+variable ceeps_11 equal -3.209128e-05
+variable ceeps_12 equal 2.333118e-05
+variable ceeps_22 equal 6.437529e-05
+# This file is for a LAMMPS simulation created by James Suter
+# The system is polyethane, using the CVFF forcefield
+# the simulation will heat up to 500K, cooldown to 200K and then perform unixial stretching in the x direction
+
+## Should we optimize the lammps call depending on the computer setup?
+## suffix OMP
+
+pair_coeff * * ${locs}/Si.sw Si
+pair_coeff * * ./lammps_scripts_sisw/Si.sw Si
+Reading potential file ./lammps_scripts_sisw/Si.sw with DATE: 2007-06-11
+
+variable eb      equal "ebond"
+variable ea      equal "epair"
+variable ev      equal "eangle"
+variable et      equal "edihed"
+variable ew      equal "evdwl"
+variable ep      equal "ecoul"
+
+
+##  -------------------------------------------
+#   Calculate the stress-strain curve for uniaxial extension in the x direction
+
+#  Setting to display thermodynamical information on the system every 500 steps
+thermo          500
+
+#  Setting the type of thermodynamical information to be printed: T, P, energies, dimesions, V, stress tensor
+thermo_style    custom step cpu temp press pe ke evdwl ecoul epair ebond eangle edihed lx ly lz vol pxx pyy pzz pxy pxz pyz v_eb v_ev v_et v_ew v_ep
+
+#  Setting the syntax of the printed thermodynamical information
+thermo_modify   flush yes line multi format float %g format 3 %15.8g
+
+#  Setting printing position information on all atoms every 5000 steps PE_stress_strain_x.xyz
+#  file specifying atom type 1, 2 and 3 with names respectively C, C and H  (identical as
+#  previous with different file name)
+#dump            atom_dump all atom ${ndump} ${loco}/${mdt}_straining.atom
+#dump            xyz_dump all xyz 5000    ${loco}/${mdt}_stress_strain_x.xyz
+#dump_modify     xyz_dump element  C C H
+
+#  Printing evolution of stress for comparison
+variable pt equal "step"
+variable pp equal "press"
+variable p0 equal "pxx"
+variable p1 equal "pyy"
+variable p2 equal "pzz"
+variable p10 equal "pxy"
+variable p11 equal "pxz"
+variable p12 equal "pyz"
+variable p3 equal "pe"
+variable p4 equal "ke"
+variable p5 equal "temp"
+variable p6 equal "lx"
+variable p7 equal "ly"
+variable p8 equal "lz"
+variable p9 equal "vol"
+variable evdwl equal "evdwl"
+variable ecoul equal "ecoul"
+variable eatom equal "epair"
+variable ebond equal "ebond"
+variable eangle equal "eangle"
+variable edihed equal "edihed"
+
+#  Storing initial dimensions of the box
+variable lx1 equal ${p6}
+variable lx1 equal 10.8618995568104
+variable ly1 equal ${p7}
+variable ly1 equal 16.2928493352156
+variable lz1 equal ${p8}
+variable lz1 equal 21.7237991136209
+
+#  Compute current stress using sampling over time and fixed NVT conditions
+#fix 1e all print 1 "${pt} ${pp} ${p0} ${p1} ${p2} ${p10} ${p11} ${p12} ${p3} ${p4} ${p5} ${p6} ${p7} ${p8} ${p9} ${evdwl} ${ecoul} ${eatom} ${ebond} ${eangle} ${edihed}" file ${loco}/${mdt}_strain_press_evol.dat screen no
+
+#  Setting a Verlet time solution algorithm/integrator
+run_style       verlet
+
+#  Loading the same fix 4 as in the init.lammps set of commands.
+#fix             4  all shake 0.001 20 1000 m 1.0  # SHAKE to keep bond distances / angles involving H-atoms fixe
+
+#  Setting a global constraint of canonical ensemble on all atoms, the temperature is set constant at 200k
+#  with a relaxation time of 100fs
+#  > Is this done right, namely sufficiently constrained? Volume is later controlled by the fix deform
+#  on all the components of the strain tensor...
+#fix             3 all nvt temp 200.0 200.0 100
+#fix             3 all langevin 200.0 200.0 100.0 699483
+#fix             3 all nvt/sllod temp ${tempt} ${tempt} 100.0
+fix             3 all nvt temp ${tempt} ${tempt} 100.0
+fix             3 all nvt temp 0.01 ${tempt} 100.0
+fix             3 all nvt temp 0.01 0.01 100.0
+
+# Note: these computes are present by default in any input script when using thermo command
+#compute thermo_press all temp
+#compute thermo_press all pressure thermo_temp
+
+#  Setting a strain constraint every 1 steps in the x-direction on the box at a strain rate of 1e-7 fs-1, position of
+#  all atoms positions are remapped following an affine transformation, namely proportional to the box deformation.
+##  Is it pertinent to remap the coordinates proportionaly to the applied
+##  strains? Should we remap velocities? Or none?
+##  This command might be moved to the C++ wrapper file (as well as all the
+##  commands that can not be set before, probably just the run command, and
+##  maybe timestep for practicality).
+#print "${eeps_00} ${eeps_11} ${eeps_22} ${eeps_01} ${eeps_02} ${eeps_12}"
+fix             1 all deform 1  x erate ${ceeps_00}                                 y erate ${ceeps_11}                                 z erate ${ceeps_22}                                xy erate ${ceeps_01}                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -5.376883e-05                                 y erate ${ceeps_11}                                 z erate ${ceeps_22}                                xy erate ${ceeps_01}                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -5.376883e-05                                 y erate -3.209128e-05                                 z erate ${ceeps_22}                                xy erate ${ceeps_01}                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -5.376883e-05                                 y erate -3.209128e-05                                 z erate 6.437529e-05                                xy erate ${ceeps_01}                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -5.376883e-05                                 y erate -3.209128e-05                                 z erate 6.437529e-05                                xy erate 1.52768e-07                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -5.376883e-05                                 y erate -3.209128e-05                                 z erate 6.437529e-05                                xy erate 1.52768e-07                                xz erate -2.046634e-05                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -5.376883e-05                                 y erate -3.209128e-05                                 z erate 6.437529e-05                                xy erate 1.52768e-07                                xz erate -2.046634e-05                                yz erate 2.333118e-05                                remap x
+
+#  Setting 2fs timesteps
+#timestep        dts #2.0  #(in wrapper)
+timestep        ${dts} #2.0
+timestep        0.002 
+
+#  Running a molecular dynamics simulation for 2000000 timesteps
+#run             nts #2000000  #(in wrapper)
+run             ${nts} #2000000
+run             9930 
+Neighbor list info ...
+  1 neighbor list requests
+  update every 1 steps, delay 0 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 5.77118
+  ghost atom cutoff = 5.77118
+Memory usage per processor = 2.32678 Mbytes
+---------------- Step        4 ----- CPU =      0.0000 (sec) ----------------
+Step     =              4 CPU      = 0 Temp     =               0 
+Press    = 6.34165e-05 PotEng   = -832.627 KinEng   = 0 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8619 Ly       = 16.2928 Lz       = 21.7238 
+Volume   = 3844.49 Pxx      = 6.68711e-05 Pyy      = 6.04409e-05 
+Pzz      = 6.29375e-05 Pxy      = 1.66606 Pxz      = -0.0760888 
+Pyz      = 0.43727 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step      500 ----- CPU =      0.0939 (sec) ----------------
+Step     =            500 CPU      = 0.0938988 Temp     =   3.5785051e-06 
+Press    = 21.575 PotEng   = -832.627 KinEng   = 8.83486e-08 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8613 Ly       = 16.2923 Lz       = 21.7252 
+Volume   = 3844.41 Pxx      = 56.1831 Pyy      = 40.0896 
+Pzz      = -31.5477 Pxy      = -0.23862 Pxz      = 11.352 
+Pyz      = -12.9728 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step     1000 ----- CPU =      0.1865 (sec) ----------------
+Step     =           1000 CPU      = 0.18654 Temp     =   2.9588317e-06 
+Press    = 43.3726 PotEng   = -832.627 KinEng   = 7.30497e-08 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8607 Ly       = 16.2918 Lz       = 21.7266 
+Volume   = 3844.32 Pxx      = 112.941 Pyy      = 80.5965 
+Pzz      = -63.4193 Pxy      = -1.42946 Pxz      = 23.0036 
+Pyz      = -26.4866 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step     1500 ----- CPU =      0.2784 (sec) ----------------
+Step     =           1500 CPU      = 0.278373 Temp     =   3.0383623e-06 
+Press    = 65.175 PotEng   = -832.627 KinEng   = 7.50132e-08 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8602 Ly       = 16.2913 Lz       = 21.728 
+Volume   = 3844.24 Pxx      = 169.705 Pyy      = 121.116 
+Pzz      = -95.2961 Pxy      = -1.91843 Pxz      = 34.6485 
+Pyz      = -39.8475 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step     2000 ----- CPU =      0.3708 (sec) ----------------
+Step     =           2000 CPU      = 0.370797 Temp     =   3.6778835e-06 
+Press    = 86.9822 PotEng   = -832.627 KinEng   = 9.08021e-08 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8596 Ly       = 16.2908 Lz       = 21.7294 
+Volume   = 3844.16 Pxx      = 226.477 Pyy      = 161.647 
+Pzz      = -127.178 Pxy      = -1.48082 Pxz      = 46.2363 
+Pyz      = -52.9528 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step     2500 ----- CPU =      0.4643 (sec) ----------------
+Step     =           2500 CPU      = 0.464274 Temp     =   3.8315628e-06 
+Press    = 108.794 PotEng   = -832.627 KinEng   = 9.45963e-08 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.859 Ly       = 16.2902 Lz       = 21.7308 
+Volume   = 3844.08 Pxx      = 283.256 Pyy      = 202.191 
+Pzz      = -159.065 Pxy      = -0.406229 Pxz      = 57.7497 
+Pyz      = -65.8408 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step     3000 ----- CPU =      0.5562 (sec) ----------------
+Step     =           3000 CPU      = 0.556206 Temp     =   3.5678448e-06 
+Press    = 130.611 PotEng   = -832.627 KinEng   = 8.80854e-08 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8584 Ly       = 16.2897 Lz       = 21.7322 
+Volume   = 3843.99 Pxx      = 340.042 Pyy      = 242.748 
+Pzz      = -190.958 Pxy      = 0.663133 Pxz      = 69.2137 
+Pyz      = -78.6677 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step     3500 ----- CPU =      0.6481 (sec) ----------------
+Step     =           3500 CPU      = 0.648108 Temp     =   3.3835086e-06 
+Press    = 152.432 PotEng   = -832.627 KinEng   = 8.35344e-08 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8578 Ly       = 16.2892 Lz       = 21.7336 
+Volume   = 3843.91 Pxx      = 396.835 Pyy      = 283.317 
+Pzz      = -222.855 Pxy      = 1.08915 Pxz      = 80.6809 
+Pyz      = -91.6203 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step     4000 ----- CPU =      0.7406 (sec) ----------------
+Step     =           4000 CPU      = 0.740562 Temp     =    3.217057e-06 
+Press    = 174.258 PotEng   = -832.627 KinEng   = 7.94249e-08 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8572 Ly       = 16.2887 Lz       = 21.735 
+Volume   = 3843.83 Pxx      = 453.635 Pyy      = 323.898 
+Pzz      = -254.758 Pxy      = 0.591283 Pxz      = 92.2013 
+Pyz      = -104.816 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step     4500 ----- CPU =      0.8471 (sec) ----------------
+Step     =           4500 CPU      = 0.847084 Temp     =   3.4048127e-06 
+Press    = 196.089 PotEng   = -832.627 KinEng   = 8.40604e-08 
+E_vdwl   = -832.627 E_coul   = 0 E_pair   = -832.627 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8566 Ly       = 16.2881 Lz       = 21.7364 
+Volume   = 3843.74 Pxx      = 510.442 Pyy      = 364.491 
+Pzz      = -286.665 Pxy      = -0.598678 Pxz      = 103.794 
+Pyz      = -118.24 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.627 v_ep     = 0 
+---------------- Step     5000 ----- CPU =      0.9556 (sec) ----------------
+Step     =           5000 CPU      = 0.955594 Temp     =   3.2787911e-06 
+Press    = 217.925 PotEng   = -832.626 KinEng   = 8.0949e-08 
+E_vdwl   = -832.626 E_coul   = 0 E_pair   = -832.626 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8561 Ly       = 16.2876 Lz       = 21.7378 
+Volume   = 3843.66 Pxx      = 567.257 Pyy      = 405.097 
+Pzz      = -318.578 Pxy      = -1.86554 Pxz      = 115.437 
+Pyz      = -131.758 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.626 v_ep     = 0 
+---------------- Step     5500 ----- CPU =      1.0477 (sec) ----------------
+Step     =           5500 CPU      = 1.0477 Temp     =   3.4959587e-06 
+Press    = 239.766 PotEng   = -832.626 KinEng   = 8.63106e-08 
+E_vdwl   = -832.626 E_coul   = 0 E_pair   = -832.626 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8555 Ly       = 16.2871 Lz       = 21.7392 
+Volume   = 3843.58 Pxx      = 624.078 Pyy      = 445.716 
+Pzz      = -350.496 Pxy      = -2.55129 Pxz      = 127.082 
+Pyz      = -145.187 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.626 v_ep     = 0 
+---------------- Step     6000 ----- CPU =      1.1398 (sec) ----------------
+Step     =           6000 CPU      = 1.13982 Temp     =   3.5778698e-06 
+Press    = 261.611 PotEng   = -832.626 KinEng   = 8.83329e-08 
+E_vdwl   = -832.626 E_coul   = 0 E_pair   = -832.626 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8549 Ly       = 16.2866 Lz       = 21.7406 
+Volume   = 3843.5 Pxx      = 680.907 Pyy      = 486.347 
+Pzz      = -382.419 Pxy      = -2.3186 Pxz      = 138.681 
+Pyz      = -158.396 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.626 v_ep     = 0 
+---------------- Step     6500 ----- CPU =      1.2318 (sec) ----------------
+Step     =           6500 CPU      = 1.23185 Temp     =   3.5482753e-06 
+Press    = 283.461 PotEng   = -832.626 KinEng   = 8.76023e-08 
+E_vdwl   = -832.626 E_coul   = 0 E_pair   = -832.626 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8543 Ly       = 16.2861 Lz       = 21.742 
+Volume   = 3843.41 Pxx      = 737.742 Pyy      = 526.99 
+Pzz      = -414.348 Pxy      = -1.33677 Pxz      = 150.216 
+Pyz      = -171.368 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.626 v_ep     = 0 
+---------------- Step     7000 ----- CPU =      1.3238 (sec) ----------------
+Step     =           7000 CPU      = 1.3238 Temp     =   3.0331387e-06 
+Press    = 305.316 PotEng   = -832.626 KinEng   = 7.48842e-08 
+E_vdwl   = -832.626 E_coul   = 0 E_pair   = -832.626 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8537 Ly       = 16.2855 Lz       = 21.7434 
+Volume   = 3843.33 Pxx      = 794.584 Pyy      = 567.645 
+Pzz      = -446.281 Pxy      = -0.188047 Pxz      = 161.703 
+Pyz      = -184.214 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.626 v_ep     = 0 
+---------------- Step     7500 ----- CPU =      1.4168 (sec) ----------------
+Step     =           7500 CPU      = 1.41684 Temp     =   2.3177805e-06 
+Press    = 327.176 PotEng   = -832.625 KinEng   = 5.7223e-08 
+E_vdwl   = -832.625 E_coul   = 0 E_pair   = -832.625 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8531 Ly       = 16.285 Lz       = 21.7448 
+Volume   = 3843.25 Pxx      = 851.434 Pyy      = 608.314 
+Pzz      = -478.22 Pxy      = 0.453605 Pxz      = 173.187 
+Pyz      = -197.105 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.625 v_ep     = 0 
+---------------- Step     8000 ----- CPU =      1.5086 (sec) ----------------
+Step     =           8000 CPU      = 1.50858 Temp     =   3.5719815e-06 
+Press    = 349.04 PotEng   = -832.625 KinEng   = 8.81875e-08 
+E_vdwl   = -832.625 E_coul   = 0 E_pair   = -832.625 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8526 Ly       = 16.2845 Lz       = 21.7462 
+Volume   = 3843.16 Pxx      = 908.29 Pyy      = 648.994 
+Pzz      = -510.163 Pxy      = 0.193811 Pxz      = 184.713 
+Pyz      = -210.187 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.625 v_ep     = 0 
+---------------- Step     8500 ----- CPU =      1.6014 (sec) ----------------
+Step     =           8500 CPU      = 1.6014 Temp     =   3.4328753e-06 
+Press    = 370.91 PotEng   = -832.625 KinEng   = 8.47532e-08 
+E_vdwl   = -832.625 E_coul   = 0 E_pair   = -832.625 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.852 Ly       = 16.284 Lz       = 21.7476 
+Volume   = 3843.08 Pxx      = 965.154 Pyy      = 689.687 
+Pzz      = -542.112 Pxy      = -0.865182 Pxz      = 196.297 
+Pyz      = -223.504 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.625 v_ep     = 0 
+---------------- Step     9000 ----- CPU =      1.6934 (sec) ----------------
+Step     =           9000 CPU      = 1.69335 Temp     =   3.5766823e-06 
+Press    = 392.784 PotEng   = -832.625 KinEng   = 8.83036e-08 
+E_vdwl   = -832.625 E_coul   = 0 E_pair   = -832.625 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8514 Ly       = 16.2834 Lz       = 21.749 
+Volume   = 3843 Pxx      = 1022.02 Pyy      = 730.392 
+Pzz      = -574.066 Pxy      = -2.1807 Pxz      = 207.924 
+Pyz      = -236.982 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.625 v_ep     = 0 
+---------------- Step     9500 ----- CPU =      1.7859 (sec) ----------------
+Step     =           9500 CPU      = 1.7859 Temp     =   3.4587356e-06 
+Press    = 414.663 PotEng   = -832.624 KinEng   = 8.53916e-08 
+E_vdwl   = -832.624 E_coul   = 0 E_pair   = -832.624 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8508 Ly       = 16.2829 Lz       = 21.7504 
+Volume   = 3842.91 Pxx      = 1078.9 Pyy      = 771.11 
+Pzz      = -606.024 Pxy      = -3.06792 Pxz      = 219.555 
+Pyz      = -250.466 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.624 v_ep     = 0 
+---------------- Step     9934 ----- CPU =      1.8666 (sec) ----------------
+Step     =           9934 CPU      = 1.86658 Temp     =   3.7305464e-06 
+Press    = 433.657 PotEng   = -832.624 KinEng   = 9.21023e-08 
+E_vdwl   = -832.624 E_coul   = 0 E_pair   = -832.624 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8503 Ly       = 16.2825 Lz       = 21.7516 
+Volume   = 3842.84 Pxx      = 1128.28 Pyy      = 806.463 
+Pzz      = -633.769 Pxy      = 0.0016494 Pxz      = 229.498 
+Pyz      = -261.393 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.624 v_ep     = 0 
+Loop time of 1.86663 on 1 procs for 9930 steps with 192 atoms
+
+Performance: 919.253 ns/day, 0.026 hours/ns, 5319.753 timesteps/s
+100.1% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 1.7502     | 1.7502     | 1.7502     |   0.0 | 93.76
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.041157   | 0.041157   | 0.041157   |   0.0 |  2.20
+Output  | 0.00090766 | 0.00090766 | 0.00090766 |   0.0 |  0.05
+Modify  | 0.057961   | 0.057961   | 0.057961   |   0.0 |  3.11
+Other   |            | 0.0164     |            |       |  0.88
+
+Nlocal:    192 ave 192 max 192 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    932 ave 932 max 932 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+FullNghs:  6528 ave 6528 max 6528 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 6528
+Ave neighs/atom = 34
+Neighbor list builds = 0
+Dangerous builds = 0
+
+#  Releasing fix deform constraint
+unfix 1
+
+##  Setting 2fs timesteps
+##timestep        dts #2.0  #(in wrapper)
+#timestep        ${dts} #2.0
+#
+##  Running a molecular dynamics simulation for relaxation of applied strain
+##  during the same amount of time
+##run             nts #2000000  #(in wrapper)
+#run             ${nts} #2000000
+
+#  Releasing fix constraints
+unfix 3
+#unfix 4
+
+#  Stopping dump
+#undump            atom_dump
+
+# Sample initial state
+#variable nss equal ${nssample0}
+#fix   shak all shake 0.001 20 1000 m 1.0
+#fix   wholevol all nvt temp ${tempt} ${tempt} 100.0
+#include ${locbe}/sample.mod.lammps
+#unfix wholevol
+#unfix shak
+
+#variable tmp equal f_stress[1]
+#variable pp11 equal ${tmp}
+#variable tmp equal f_stress[2]
+#variable pp22 equal ${tmp}
+#variable tmp equal f_stress[3]
+#variable pp33 equal ${tmp}
+#variable tmp equal f_stress[4]
+#variable pp12 equal ${tmp}
+#variable tmp equal f_stress[5]
+#variable pp13 equal ${tmp}
+#variable tmp equal f_stress[6]
+#variable pp23 equal ${tmp}
+write_restart /home/jinzhen/projects/SCEMa/examples/test1/nanoscale_output/last.1.g0_1.dump
+write_restart /home/jinzhen/projects/SCEMa/examples/test1/nanoscale_restart/lcts.1.g0_1.dump
+Total wall time: 0:00:01

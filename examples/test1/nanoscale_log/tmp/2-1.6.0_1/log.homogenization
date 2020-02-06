@@ -1,0 +1,355 @@
+LAMMPS (17 Nov 2016)
+variable loco string /home/jinzhen/projects/SCEMa/examples/test1/nanoscale_log/tmp/2-1.6.0_1
+variable locs string ./lammps_scripts_sisw
+variable tempt equal 0.010000
+# This file is for a LAMMPS simulation created by James Suter
+# The system is polyethane, using the CVFF forcefield
+# the simulation will heat up to 500K, cooldown to 200K and then perform unixial stretching in the x direction
+
+##  This script should be just run once at the beginning to provide the initial
+##  reference testing box, which will the be evolved using the in.lammps.strain
+##  input file.
+
+## Should we optimize the lammps call depending on the computer setup?
+## suffix OMP
+
+#  Setting units convention for the rest of the file
+units           real            # default
+
+#  Setting variables/attributes associated with each atom: charge, bonds, angles,
+#  dihedrals, impropers (full)
+atom_style      full
+
+#  Setting the dimension of the simulation
+dimension       3               # default
+
+#  Setting boundary types in each dimension (periodic)
+boundary        p p p
+
+# Choose potential
+pair_style	sw
+
+# Setup neighbor style
+neighbor 1.0 nsq
+neigh_modify once no every 1 delay 0 check yes
+read_restart /home/jinzhen/projects/SCEMa/examples/test1/nanoscale_output/last.6.g0_1.dump
+  triclinic box = (0.0185429 0.0201032 -0.0158083) to (10.8415 16.2699 21.7358) with tilt (0.000184488 0.00540149 -0.0169699)
+  1 by 1 by 1 MPI processor grid
+  192 atoms
+reset_timestep 0
+variable dts equal 0.002000
+variable locbe string ./lammps_scripts_sisw/ELASTIC
+variable nssample0 equal 100
+variable nssample  equal 100
+# Compute elastic constant tensor for a crystal
+#
+# Written by Aidan Thompson (Sandia, athomps@sandia.gov)
+#
+#  This script uses the following three include files.
+#
+#   init.mod.lammps      (must be modified for different crystal structures)
+# 	       	  Define units, deformation parameters and initial
+#		  configuration of the atoms and simulation cell.
+#
+#
+#   potential.mod.lammps    (must be modified for different pair styles)
+# 		     Define pair style and other attributes
+#		     not stored in restart file
+#
+#
+#   displace.mod.lammps    (displace.mod.lammps should not need to be modified)
+# 		    Perform positive and negative box displacements
+# 		    in direction ${dir} and size ${up}.
+# 		    It uses the resultant changes
+#		    in stress to compute one
+# 		    row of the elastic stiffness tensor
+#
+#		    Inputs variables:
+#		    	   dir = the Voigt deformation component
+#		    		    (1,2,3,4,5,6)
+#		    Global constants:
+#       	    	   up = the deformation magnitude (strain units)
+#       		   cfac = conversion from LAMMPS pressure units to
+#               	   output units for elastic constants
+#
+#
+#  To run this on a different system, it should only be necessary to
+#  modify the files init.mod and potential.mod. In order to calculate
+#  the elastic constants correctly, care must be taken to specify
+#  the correct units in init.mod (units, cfac and cunits). It is also
+#  important to verify that the minimization of energy w.r.t atom
+#  positions in the deformed cell is fully converged.
+#  One indication of this is that the elastic constants are insensitive
+#  to the choice of the variable ${up} in init.mod. Another is to check
+#  the final max and two-norm forces reported in the log file. If you know
+#  that minimization is not required, you can set maxiter = 0.0 in
+#  init.mod.
+#
+include ${locbe}/init.mod.lammps
+include ./lammps_scripts_sisw/ELASTIC/init.mod.lammps
+# NOTE: This script can be modified for different atomic structures,
+# units, etc. See in.elastic for more info.
+#
+# Sampling and strain application number of steps
+#variable nssample0 equal 5000000
+#variable nssample equal 1
+#variable nsstrain equal 1
+
+# Define the finite deformation size. Try several values of this
+# variable to verify that results do not depend on it.
+#variable up equal 1.0e-2
+
+# Define the amount of random jiggle for atoms
+# This prevents atoms from staying on saddle points
+#variable atomjiggle equal 1.0e-5
+
+# Uncomment one of these blocks, depending on what units
+# you are using in LAMMPS and for output
+# metal units, elastic constants in eV/A^3
+#units		metal
+#variable cfac equal 6.2414e-7
+#variable cunits string eV/A^3
+# metal units, elastic constants in GPa
+#units		metal
+#variable cfac equal 1.0e-4
+#variable cunits string GPa
+# real units, elastic constants in GPa
+#units		real
+variable cfac equal 1.01325e-4
+variable cunits string GPa
+
+variable dir equal 0
+variable ori string 'org'
+
+include ${locbe}/potential.mod.lammps
+include ./lammps_scripts_sisw/ELASTIC/potential.mod.lammps
+# NOTE: This script can be modified for different pair styles
+# See in.elastic for more info.
+
+# Choose potential
+pair_coeff * * ${locs}/Si.sw Si
+pair_coeff * * ./lammps_scripts_sisw/Si.sw Si
+Reading potential file ./lammps_scripts_sisw/Si.sw with DATE: 2007-06-11
+
+#  Setting to display thermodynamical information on the system every 500 steps
+thermo          500
+
+#  Setting the type of thermodynamical information to be printed: T, P, energies, dimesions, V, stress tensor
+thermo_style    custom step cpu temp press pe ke evdwl ecoul epair ebond eangle edihed lx ly lz vol pxx pyy pzz pxy pxz pyz
+
+#  Setting the syntax of the printed thermodynamical information
+thermo_modify   flush yes line multi format float %g format 3 %15.8g
+
+#  Printing evolution of stress for comparison
+variable pt equal "step"
+variable pp equal "press"
+variable p0 equal "pxx"
+variable p1 equal "pyy"
+variable p2 equal "pzz"
+variable p3 equal "pe"
+variable p4 equal "ke"
+variable p5 equal "temp"
+variable p6 equal "lx"
+variable p7 equal "ly"
+variable p8 equal "lz"
+variable p9 equal "vol"
+
+#  Compute current stress using sampling over time and fixed NVT conditions
+#fix 1e all print 1 "${pt} ${pp} ${p0} ${p1} ${p2} ${p3} ${p4} ${p5} ${p6} ${p7} ${p8} ${p9}" file ${loco}/PE_elastic_${dir}_${ori}_evol.dat screen no
+
+# Sample initial state (if initialization only, otherwise
+# restore initial stress tensor)
+variable nss equal ${nssample0}
+variable nss equal 100
+
+#  Average stress tensor over the whole NVT run
+if "${nss} > 10000" then "variable nav equal ${nss}/1000" else "variable nav equal ${nss}/10"
+variable nav equal ${nss}/10
+variable nav equal 100/10
+print ${nav}
+print 10
+10
+fix stress  all ave/time 1 ${nav} ${nav} c_thermo_press[*] ave running
+fix stress  all ave/time 1 10 ${nav} c_thermo_press[*] ave running
+fix stress  all ave/time 1 10 10 c_thermo_press[*] ave running
+
+#fix   shak all shake 0.001 20 1000 m 1.0
+fix   wholevol all nvt temp ${tempt} ${tempt} 100.0
+fix   wholevol all nvt temp 0.01 ${tempt} 100.0
+fix   wholevol all nvt temp 0.01 0.01 100.0
+include ${locbe}/sample.mod.lammps
+include ./lammps_scripts_sisw/ELASTIC/sample.mod.lammps
+# This file is for a LAMMPS simulation created by James Suter
+# The system is polyethane, using the CVFF forcefield
+# the simulation will heat up to 500K, cooldown to 200K and then perform unixial stretching in the x direction
+
+## Should we optimize the lammps call depending on the computer setup?
+## suffix OMP
+
+# Number of time steps used for sampling
+#variable nss equal 50
+
+##  -------------------------------------------
+#   Calculate the stress-strain curve for uniaxial extension in the x direction
+#
+##  Setting to display thermodynamical information on the system every 500 steps
+#thermo          500
+#
+##  Setting the type of thermodynamical information to be printed: T, P, energies, dimesions, V, stress tensor
+#thermo_style    custom step cpu temp press pe ke evdwl ecoul epair ebond eangle edihed lx ly lz vol pxx pyy pzz pxy pxz pyz
+#
+##  Setting the syntax of the printed thermodynamical information
+#thermo_modify   flush yes line multi format float %g format 3 %15.8g
+#
+##  Printing evolution of stress for comparison
+#variable pt equal "step"
+#variable pp equal "press"
+#variable p0 equal "pxx"
+#variable p1 equal "pyy"
+#variable p2 equal "pzz"
+#variable p3 equal "pe"
+#variable p4 equal "ke"
+#variable p5 equal "temp"
+#variable p6 equal "lx"
+#variable p7 equal "ly"
+#variable p8 equal "lz"
+#variable p9 equal "vol"
+#
+##  Compute current stress using sampling over time and fixed NVT conditions
+#fix 1e all print 1 "${pt} ${pp} ${p0} ${p1} ${p2} ${p3} ${p4} ${p5} ${p6} ${p7} ${p8} ${p9}" file ${loco}/press_evol.dat screen no
+
+#
+print "dir: ${dir} - orientation: ${ori}"
+dir: 0 - orientation: org
+#
+#fix stress1 all ave/time 1 ${nav} ${nav} c_thermo_press[*] file ${loco}/ave_${nav}_${dir}_${delta}.dat
+#fix stress2 all ave/time 1 ${nav} ${nav} c_thermo_press[*] ave running file ${loco}/ave_run_${nav}_${dir}_${delta}.dat
+#
+#variable nav equal ${nss}/1000
+#fix stress3 all ave/time 1 ${nav} ${nav} c_thermo_press[*] file ${loco}/ave_${nav}_${dir}_${delta}.dat
+#fix stress4 all ave/time 1 ${nav} ${nav} c_thermo_press[*] ave running file ${loco}/ave_run_${nav}_${dir}_${delta}.dat
+
+#  Setting printing position information on all atoms every nss steps PE_stress_strain_x.xyz
+#  file specifying atom type 1, 2 and 3 with names respectively C, C and H  (identical as
+#  previous with different file name)
+#if "${nss} > 10000" then "variable ndump equal ${nss}/1000" else "variable ndump equal ${nss}/10"
+#dump            xyz_dump all xyz ${ndump}    ${loco}/PE_atom_${dir}_${ori}.xyz
+#dump_modify     xyz_dump element  C C H
+
+#  Setting a Verlet time solution algorithm/integrator
+run_style       verlet
+#  Setting 2fs timesteps for a Verlet time solution algorithm/integrator
+timestep        ${dts} # 2fs - when used with SHAKE
+timestep        0.002 
+
+#  Apply fixed NVT and let the system fluctuate during MD
+#fix             3 all nvt temp 200.0 200.0 100.0
+
+#  Running a molecular dynamics simulation for 100000 timesteps
+run             ${nss}
+run             100
+Neighbor list info ...
+  1 neighbor list requests
+  update every 1 steps, delay 0 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 5.77118
+  ghost atom cutoff = 5.77118
+Memory usage per processor = 2.3087 Mbytes
+---------------- Step        0 ----- CPU =      0.0000 (sec) ----------------
+Step     =              0 CPU      = 0 Temp     =   3.4744509e-06 
+Press    = 5065.43 PotEng   = -832.585 KinEng   = 8.57796e-08 
+E_vdwl   = -832.585 E_coul   = 0 E_pair   = -832.585 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8229 Ly       = 16.2498 Lz       = 21.7516 
+Volume   = 3825.46 Pxx      = 6524.98 Pyy      = 5818.06 
+Pzz      = 2853.26 Pxy      = -7.553 Pxz      = -140.966 
+Pyz      = 442.571 
+---------------- Step      100 ----- CPU =      0.0185 (sec) ----------------
+Step     =            100 CPU      = 0.0184889 Temp     =   3.5159944e-06 
+Press    = 5065.43 PotEng   = -832.585 KinEng   = 8.68053e-08 
+E_vdwl   = -832.585 E_coul   = 0 E_pair   = -832.585 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8229 Ly       = 16.2498 Lz       = 21.7516 
+Volume   = 3825.46 Pxx      = 6524.98 Pyy      = 5818.06 
+Pzz      = 2853.26 Pxy      = -4.53916 Pxz      = -140.664 
+Pyz      = 442.154 
+Loop time of 0.0185077 on 1 procs for 100 steps with 192 atoms
+
+Performance: 933.664 ns/day, 0.026 hours/ns, 5403.151 timesteps/s
+108.1% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0.017428   | 0.017428   | 0.017428   |   0.0 | 94.17
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.00039816 | 0.00039816 | 0.00039816 |   0.0 |  2.15
+Output  | 2.1696e-05 | 2.1696e-05 | 2.1696e-05 |   0.0 |  0.12
+Modify  | 0.00050664 | 0.00050664 | 0.00050664 |   0.0 |  2.74
+Other   |            | 0.0001531  |            |       |  0.83
+
+Nlocal:    192 ave 192 max 192 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    932 ave 932 max 932 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+FullNghs:  6528 ave 6528 max 6528 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 6528
+Ave neighs/atom = 34
+Neighbor list builds = 0
+Dangerous builds = 0
+
+#  Releasing fix constraints
+#unfix 3
+
+#undump            xyz_dump
+unfix wholevol
+#unfix shak
+
+variable tmp equal f_stress[1]
+variable pp11 equal ${tmp}
+variable pp11 equal 6524.9795519995
+variable tmp equal f_stress[2]
+variable pp22 equal ${tmp}
+variable pp22 equal 5818.05754529556
+variable tmp equal f_stress[3]
+variable pp33 equal ${tmp}
+variable pp33 equal 2853.2590896629
+variable tmp equal f_stress[4]
+variable pp12 equal ${tmp}
+variable pp12 equal -6.26261942865327
+variable tmp equal f_stress[5]
+variable pp13 equal ${tmp}
+variable pp13 equal -140.921303749772
+variable tmp equal f_stress[6]
+variable pp23 equal ${tmp}
+variable pp23 equal 442.506778184766
+
+unfix stress
+
+## Possibility #2: Apply fixed NVT and let the system fluctuate during MD
+## simulation over sufficient time and get the initial stress (try to avoid doing it
+## again if this has been done at the end of the application of the strain state).
+## Need to pay attention to indexes conversion because compute pressure does not use
+## Voigt indexes to order stress vector...
+variable pxx0 equal ${pp11}
+variable pxx0 equal 6524.9795519995
+variable pyy0 equal ${pp22}
+variable pyy0 equal 5818.05754529556
+variable pzz0 equal ${pp33}
+variable pzz0 equal 2853.2590896629
+variable pyz0 equal ${pp12}
+variable pyz0 equal -6.26261942865327
+variable pxz0 equal ${pp13}
+variable pxz0 equal -140.921303749772
+variable pxy0 equal ${pp23}
+variable pxy0 equal 442.506778184766
+
+print "Current stress: ${pp11} ${pp22} ${pp33} ${pp12} ${pp13} ${pp23} "
+Current stress: 6524.9795519995 5818.05754529556 2853.2590896629 -6.26261942865327 -140.921303749772 442.506778184766 
+print "Used stress for homogenization: ${pxx0} ${pyy0} ${pzz0} ${pyz0} ${pxz0} ${pxy0} "
+Used stress for homogenization: 6524.9795519995 5818.05754529556 2853.2590896629 -6.26261942865327 -140.921303749772 442.506778184766 
+Total wall time: 0:00:00

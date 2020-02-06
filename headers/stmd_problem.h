@@ -116,11 +116,13 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
     // Creating LAMMPS instance
     LAMMPS *lmp = NULL;
     lmp = new LAMMPS(nargs, lmparg, md_batch_communicator);
-    std::cout<< ">>>>>>>>the lmargs "<<lmparg[3]<< "   " << lmparg[4]<< std::endl;
+    std::cout << ">>>>>>>>the lmargs " << lmparg[3] << "   " << lmparg[4] << std::endl;
     // Passing location for output as variable
     sprintf(cline, "variable mdt string %d", md_sim.material);
     lammps_command(lmp, cline);
     sprintf(cline, "variable loco string %s", md_sim.log_file.c_str());
+    lammps_command(lmp, cline);
+    sprintf(cline, "variable locs string %s", md_sim.scripts_folder.c_str());
     lammps_command(lmp, cline);
     if (md_sim.force_field == "reax") {
         sprintf(cline, "variable locf string %s", locff); /*reaxff*/
@@ -147,7 +149,7 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
     /*mdcout << "               "
             << "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
             << "   ... from previous state data...   " << std::flush;*/
-    std::cout<< "<<<<<<<<<<<<<<<<<<<<-->>>>>>>>>>>>>>>>>>>>>>"<< straindata_last<< "  "<< md_sim.force_field<<std::endl;
+    std::cout << "<<<<<<<<<<<<<<<<<<<<-->>>>>>>>>>>>>>>>>>>>>>" << straindata_last << "  " << md_sim.force_field << std::endl;
 //./nanoscale_output/last.504.g0_1.dump  opls
     // Check the presence of a dump file to restart from
     std::ifstream ifile(straindata_last);
@@ -170,13 +172,13 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
     } else {
         /*mdcout << "  initially computed." << std::endl;*/
         sprintf(cline, "read_restart %s", initdata);
-        std::cout<< "command 1 "<< cline<< std::endl;
+        std::cout << "command 1 " << cline << std::endl;
         lammps_command(lmp, cline);
         sprintf(cline, "print 'initially computed'");
-        std::cout<< "command 1 "<< cline<< std::endl;
+        std::cout << "command 1 " << cline << std::endl;
         lammps_command(lmp, cline);
     }
-    std::cout<< "<<<<<<<<<<<<<<<<<<<<00>>>>>>>>>>>>>>>>>>>>>>"<<std::endl;
+    std::cout << "<<<<<<<<<<<<<<<<<<<<00>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
 
 
     // Query box dimensions
@@ -192,7 +194,7 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
         sprintf(vdir, "ll%d", i + 1);
         lbdim[i] = *((double *) lammps_extract_variable(lmp, vdir, NULL));
     }
-    std::cout<< "<<<<<<<<<<<<<<<<<<<<11>>>>>>>>>>>>>>>>>>>>>>"<<std::endl;
+    std::cout << "<<<<<<<<<<<<<<<<<<<<11>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
     // Correction of strain tensor with actual box dimensions
     for (unsigned int i = 0; i < dim; i++) {
         md_sim.strain[i][i] /= lbdim[i];
@@ -264,7 +266,8 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
     }
     sprintf(cline, "variable loco string %s", md_sim.log_file.c_str());
     lammps_command(lmp, cline);
-
+    sprintf(cline, "variable locs string %s", md_sim.scripts_folder.c_str());
+    lammps_command(lmp, cline);
     // Setting testing temperature
     sprintf(cline, "variable tempt equal %f", md_sim.temperature);
     lammps_command(lmp, cline);
