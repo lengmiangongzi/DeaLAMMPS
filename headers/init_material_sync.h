@@ -148,10 +148,6 @@ namespace HMM
 		// Dispatch of the available processes on to different groups for parallel
 		// update of quadrature points
 		int npbtch_min = batch_nnodes_min*machine_ppn;
-		//int nbtch_max = int(n_world_processes/npbtch_min);
-
-		//int nrounds = int(nmdruns/nbtch_max)+1;
-		//int nmdruns_round = nmdruns/nrounds;
 
 		int fair_npbtch = int(mmd_n_processes/(nmdruns));
 
@@ -194,8 +190,6 @@ namespace HMM
 	void EQMDSync<dim>::load_replica_generation_data ()
 	{
 	    using boost::property_tree::ptree;
-        std::cout<< "Inn<<<1>>>>>>>>>>>>>>>>"<< std::endl;
-
 	    char filename[1024];
 		for(unsigned int imd=0; imd<mdtype.size(); imd++)
 			for(unsigned int irep=0; irep<nrepl; irep++){
@@ -207,8 +201,6 @@ namespace HMM
 					exit(1);
 				}
 			}
-        std::cout<< "Inn<<<2>>>>>>>>>>>>>>>>"<< std::endl;
-
 		replica_data.resize(nrepl * mdtype.size());
 		for(unsigned int imd=0; imd<mdtype.size(); imd++)
 			for(unsigned int irep=0; irep<nrepl; irep++){
@@ -223,7 +215,6 @@ namespace HMM
 				// Parse JSON data file
 			    sprintf(filename, "%s/%s_%d.json", nanostatelocin.c_str(),
 			    		replica_data[imd*nrepl+irep].mat.c_str(), replica_data[imd*nrepl+irep].repl);
-                std::cout<< "Inn<<<3>>>>>>>>>>>>>>>>"<< filename<< std::endl;
 
 			    std::ifstream jsonFile(filename);
 			    ptree pt;
@@ -234,7 +225,6 @@ namespace HMM
 			    {
 			        mcout << "Invalid JSON replica data input file (" << filename << ")" << std::endl;  // Never gets here
 			    }
-                std::cout<< "Inn<<<4>>>>>>>>>>>>>>>>"<< filename<< std::endl;
 
 			    // Printing the whole tree of the JSON file
 			    //bptree_print(pt);
@@ -246,11 +236,6 @@ namespace HMM
 				// Load number of flakes in box
 			    std::string numflakes = bptree_read(pt, "Nsheets");
 				replica_data[imd*nrepl+irep].nflakes = std::stoi(numflakes);
-
-				/*mcout << "Hi repl: " << replica_data[imd*nrepl+irep].repl
-					  << " - mat: " << replica_data[imd*nrepl+irep].mat
-					  << " - rho: " << replica_data[imd*nrepl+irep].rho
-					  << std::endl;*/
 
 				// Load replica orientation (normal to flake plane if composite)
 				if(replica_data[imd*nrepl+irep].nflakes==1){
@@ -272,8 +257,6 @@ namespace HMM
 					// Simply fill the rotation matrix with the identity matrix
 					replica_data[imd*nrepl+irep].rotam=idmat;
 				}
-                std::cout<< "Inn<<<5>>>>>>>>>>>>>>>>"<< filename<< std::endl;
-
 			}
 	}
 
@@ -339,7 +322,6 @@ namespace HMM
 
 					// Executing directly from the current MPI_Communicator (not fault tolerant)
 					EQMDProblem<3> eqmd_problem (md_batch_communicator, md_batch_pcolor);
-                    std::cout<< "<<<<<<<<<<<3  innn>>>>>>>>>>>>>>>"<< std::endl;
 					eqmd_problem.equil(mdtype[imdt], nanostatelocin,
 								   qpreplogloc[imdrun], md_scripts_directory,
 								   lengthoutputfile[imdrun], stressoutputfile[imdrun],
@@ -347,8 +329,6 @@ namespace HMM
 								   numrepl, md_timestep_length, md_temperature,
 								   md_nsteps_sample, md_nsteps_equil, md_strain_rate,
 								   md_strain_ampl, md_force_field);
-                    std::cout<< "<<<<<<<<<<<4  innn>>>>>>>>>>>>>>>"<< std::endl;
-
 				}
 			}
 		}
@@ -383,16 +363,9 @@ namespace HMM
 		nrepl = nr;
 
 		use_pjm_scheduler = ups;
-        std::cout<< "<<<<<<<<<<<1>>>>>>>>>>>>>>>>"<< std::endl;
 		load_replica_generation_data();
-        std::cout<< "<<<<<<<<<<<2>>>>>>>>>>>>>>>>"<< std::endl;
-
 		prepare_replica_equilibration();
-        std::cout<< "<<<<<<<<<<<3>>>>>>>>>>>>>>>>"<< std::endl;
-
 		equilibrate_replicas();
-        std::cout<< "<<<<<<<<<<<4>>>>>>>>>>>>>>>>"<< std::endl;
-
     }
 }
 

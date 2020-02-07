@@ -1,6 +1,7 @@
 LAMMPS (17 Nov 2016)
 variable mdt string 0
 variable loco string /home/jinzhen/projects/SCEMa/examples/streched_polyhedron/nanoscale_log/tmp/1-1.8.0_1
+variable locs string ./lammps_scripts_sisw
 variable tempt equal 0.010000
 # This file is for a LAMMPS simulation created by James Suter
 # The system is polyethane, using the CVFF forcefield

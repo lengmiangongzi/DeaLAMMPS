@@ -43,7 +43,8 @@ public:
 private:
 
     SymmetricTensor<2, dim> lammps_straining(MDSim<dim> md_sim);
-    SymmetricTensor<2, dim> stress_from_hookes_law (SymmetricTensor<2, dim> strain);
+//    SymmetricTensor<2, dim> stress_from_hookes_law (SymmetricTensor<2, dim> strain);
+    SymmetricTensor<2, dim> stress_from_hookes_law (SymmetricTensor<2, dim> strain, SymmetricTensor<4, dim> stiffness);
 
     MPI_Comm                            md_batch_communicator;
     const int                           md_batch_n_processes;
@@ -83,7 +84,8 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
     }
     // Name of nanostate binary files
     char mdstate[1024];
-    sprintf(mdstate, "g%d_%d", md_sim.material, md_sim.replica);
+//    sprintf(mdstate, "g%d_%d", md_sim.material, md_sim.replica);
+    sprintf(mdstate, "%s_%d", md_sim.matid.c_str(), md_sim.replica);
 
     char initdata[1024];
     sprintf(initdata, "%s/init.%s.bin", md_sim.output_folder.c_str(), mdstate);
@@ -116,9 +118,9 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
     // Creating LAMMPS instance
     LAMMPS *lmp = NULL;
     lmp = new LAMMPS(nargs, lmparg, md_batch_communicator);
-    std::cout << ">>>>>>>>the lmargs " << lmparg[3] << "   " << lmparg[4] << std::endl;
     // Passing location for output as variable
-    sprintf(cline, "variable mdt string %d", md_sim.material);
+    sprintf(cline, "variable mdt string %d", md_sim.matid.c_str());
+
     lammps_command(lmp, cline);
     sprintf(cline, "variable loco string %s", md_sim.log_file.c_str());
     lammps_command(lmp, cline);
@@ -138,19 +140,6 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
 
     sprintf(cfile, "%s/%s", md_sim.scripts_folder.c_str(), "in.set.lammps");
     lammps_file(lmp, cfile);
-
-    /*mdcout << "               "
-            << "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-            << "Compute current state data...       " << std::endl;*/
-
-    // Check if a previous state has already been computed specifically for
-    // this quadrature point, otherwise use the initial state (which is the
-    // last state of this quadrature point)
-    /*mdcout << "               "
-            << "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-            << "   ... from previous state data...   " << std::flush;*/
-    std::cout << "<<<<<<<<<<<<<<<<<<<<-->>>>>>>>>>>>>>>>>>>>>>" << straindata_last << "  " << md_sim.force_field << std::endl;
-//./nanoscale_output/last.504.g0_1.dump  opls
     // Check the presence of a dump file to restart from
     std::ifstream ifile(straindata_last);
     if (ifile.good()) {
@@ -170,16 +159,11 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
         sprintf(cline, "print 'specifically computed'");
         lammps_command(lmp, cline);
     } else {
-        /*mdcout << "  initially computed." << std::endl;*/
         sprintf(cline, "read_restart %s", initdata);
-        std::cout << "command 1 " << cline << std::endl;
         lammps_command(lmp, cline);
         sprintf(cline, "print 'initially computed'");
-        std::cout << "command 1 " << cline << std::endl;
         lammps_command(lmp, cline);
     }
-    std::cout << "<<<<<<<<<<<<<<<<<<<<00>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
-
 
     // Query box dimensions
     char vdir[1024];
@@ -194,7 +178,6 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
         sprintf(vdir, "ll%d", i + 1);
         lbdim[i] = *((double *) lammps_extract_variable(lmp, vdir, NULL));
     }
-    std::cout << "<<<<<<<<<<<<<<<<<<<<11>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
     // Correction of strain tensor with actual box dimensions
     for (unsigned int i = 0; i < dim; i++) {
         md_sim.strain[i][i] /= lbdim[i];
@@ -202,7 +185,6 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
     }
 
     // Number of timesteps in the MD simulation, rounding to nearest 10, enforcing at least 10
-//int nts = std::max(int(std::ceil(md_sim.strain.norm()/(md_sim.timestep_length*md_sim.strain_rate)/10)*10),1);
     int nts;
     double strain_time = md_sim.strain.norm() / md_sim.strain_rate;
     nts = std::ceil( (strain_time / md_sim.timestep_length) / 10.0) * 10; // rounded to the nearest 10
@@ -222,15 +204,9 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
         }
 
     // Run the NEMD simulations of the strained box
-    /*mdcout << "               "
-            << "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-            << "   ... reading and executing in.strain.lammps.       " << std::endl;*/
     sprintf(cfile, "%s/%s", md_sim.scripts_folder.c_str(), "in.strain.lammps");
     lammps_file(lmp, cfile);
 
-    /*mdcout << "               "
-            << "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-            << "Saving state data...       " << std::endl;*/
     // Save data to specific file for this quadrature point
     if (md_sim.force_field == "opls") {
         sprintf(cline, "write_restart %s", straindata_last); /*opls*/
@@ -251,10 +227,6 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
     }
     // close down LAMMPS
     delete lmp;
-
-    /*mdcout << "               "
-            << "(MD - " << timeid <<"."<< cellid << " - repl " << repl << ") "
-            << "Homogenization of stiffness and stress using in.elastic.lammps...       " << std::endl;*/
 
     // Creating LAMMPS instance
     sprintf(lmparg[4], "%s/log.homogenization", md_sim.log_file.c_str());
@@ -340,12 +312,8 @@ SymmetricTensor<2, dim> STMDProblem<dim>::lammps_straining (MDSim<dim> md_sim) {
 
 
 template <int dim>
-SymmetricTensor<2, dim> STMDProblem<dim>::stress_from_hookes_law (SymmetricTensor<2, dim> strain) {
+SymmetricTensor<2, dim> STMDProblem<dim>::stress_from_hookes_law (SymmetricTensor<2, dim> strain, SymmetricTensor<4, dim> stiffness) {
     SymmetricTensor<2, dim> stress;
-
-    SymmetricTensor<4, dim> stiffness;
-    read_tensor<dim>("nanoscale_input/init.g0_1.stiff", stiffness);
-
     stress = stiffness * strain;
     return stress;
 }
@@ -370,8 +338,7 @@ void STMDProblem<dim>::strain (MDSim<dim> &md_sim, bool approx_md_with_hookes_la
     MPI_Barrier(md_batch_communicator);
 
     if (approx_md_with_hookes_law == true) {
-        // this option is meant for testing
-        md_sim.stress = stress_from_hookes_law(md_sim.strain);
+        md_sim.stress = stress_from_hookes_law(md_sim.strain, md_sim.stiffness);
         md_sim.stress_updated = true;
     } else {
         md_sim.stress = lammps_straining(md_sim);

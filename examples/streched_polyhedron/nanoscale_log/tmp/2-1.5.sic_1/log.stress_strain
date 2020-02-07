@@ -1,0 +1,1288 @@
+LAMMPS (17 Nov 2016)
+variable mdt string 918577200
+variable loco string /home/jinzhen/projects/SCEMa/examples/streched_polyhedron/nanoscale_log/tmp/2-1.5.sic_1
+variable locs string ./lammps_scripts_sisw
+variable tempt equal 0.010000
+# This file is for a LAMMPS simulation created by James Suter
+# The system is polyethane, using the CVFF forcefield
+# the simulation will heat up to 500K, cooldown to 200K and then perform unixial stretching in the x direction
+
+##  This script should be just run once at the beginning to provide the initial
+##  reference testing box, which will the be evolved using the in.lammps.strain
+##  input file.
+
+## Should we optimize the lammps call depending on the computer setup?
+## suffix OMP
+
+#  Setting units convention for the rest of the file
+units           real            # default
+
+#  Setting variables/attributes associated with each atom: charge, bonds, angles,
+#  dihedrals, impropers (full)
+atom_style      full
+
+#  Setting the dimension of the simulation
+dimension       3               # default
+
+#  Setting boundary types in each dimension (periodic)
+boundary        p p p
+
+# Choose potential
+pair_style	sw
+
+# Setup neighbor style
+neighbor 1.0 nsq
+neigh_modify once no every 1 delay 0 check yes
+read_restart /home/jinzhen/projects/SCEMa/examples/streched_polyhedron/nanoscale_output/last.5.sic_1.dump
+  triclinic box = (0.0249964 0.0222544 -0.0184948) to (10.835 16.2677 21.7385) with tilt (0.00179802 -0.00967605 0.00551905)
+  1 by 1 by 2 MPI processor grid
+  192 atoms
+print 'specifically computed'
+specifically computed
+variable ll1 equal lx
+variable ll2 equal ly
+variable ll3 equal lz
+variable dts equal 0.002000
+variable nts equal 51130
+variable ceeps_00 equal -7.765683e-05
+variable ceeps_01 equal 8.337155e-07
+variable ceeps_02 equal -7.165799e-06
+variable ceeps_11 equal -5.122762e-05
+variable ceeps_12 equal 7.722077e-06
+variable ceeps_22 equal 3.346635e-05
+# This file is for a LAMMPS simulation created by James Suter
+# The system is polyethane, using the CVFF forcefield
+# the simulation will heat up to 500K, cooldown to 200K and then perform unixial stretching in the x direction
+
+## Should we optimize the lammps call depending on the computer setup?
+## suffix OMP
+
+pair_coeff * * ${locs}/Si.sw Si
+pair_coeff * * ./lammps_scripts_sisw/Si.sw Si
+Reading potential file ./lammps_scripts_sisw/Si.sw with DATE: 2007-06-11
+
+variable eb      equal "ebond"
+variable ea      equal "epair"
+variable ev      equal "eangle"
+variable et      equal "edihed"
+variable ew      equal "evdwl"
+variable ep      equal "ecoul"
+
+
+##  -------------------------------------------
+#   Calculate the stress-strain curve for uniaxial extension in the x direction
+
+#  Setting to display thermodynamical information on the system every 500 steps
+thermo          500
+
+#  Setting the type of thermodynamical information to be printed: T, P, energies, dimesions, V, stress tensor
+thermo_style    custom step cpu temp press pe ke evdwl ecoul epair ebond eangle edihed lx ly lz vol pxx pyy pzz pxy pxz pyz v_eb v_ev v_et v_ew v_ep
+
+#  Setting the syntax of the printed thermodynamical information
+thermo_modify   flush yes line multi format float %g format 3 %15.8g
+
+#  Setting printing position information on all atoms every 5000 steps PE_stress_strain_x.xyz
+#  file specifying atom type 1, 2 and 3 with names respectively C, C and H  (identical as
+#  previous with different file name)
+#dump            atom_dump all atom ${ndump} ${loco}/${mdt}_straining.atom
+#dump            xyz_dump all xyz 5000    ${loco}/${mdt}_stress_strain_x.xyz
+#dump_modify     xyz_dump element  C C H
+
+#  Printing evolution of stress for comparison
+variable pt equal "step"
+variable pp equal "press"
+variable p0 equal "pxx"
+variable p1 equal "pyy"
+variable p2 equal "pzz"
+variable p10 equal "pxy"
+variable p11 equal "pxz"
+variable p12 equal "pyz"
+variable p3 equal "pe"
+variable p4 equal "ke"
+variable p5 equal "temp"
+variable p6 equal "lx"
+variable p7 equal "ly"
+variable p8 equal "lz"
+variable p9 equal "vol"
+variable evdwl equal "evdwl"
+variable ecoul equal "ecoul"
+variable eatom equal "epair"
+variable ebond equal "ebond"
+variable eangle equal "eangle"
+variable edihed equal "edihed"
+
+#  Storing initial dimensions of the box
+variable lx1 equal ${p6}
+variable lx1 equal 10.8100072986026
+variable ly1 equal ${p7}
+variable ly1 equal 16.245491126145
+variable lz1 equal ${p8}
+variable lz1 equal 21.7569895101241
+
+#  Compute current stress using sampling over time and fixed NVT conditions
+#fix 1e all print 1 "${pt} ${pp} ${p0} ${p1} ${p2} ${p10} ${p11} ${p12} ${p3} ${p4} ${p5} ${p6} ${p7} ${p8} ${p9} ${evdwl} ${ecoul} ${eatom} ${ebond} ${eangle} ${edihed}" file ${loco}/${mdt}_strain_press_evol.dat screen no
+
+#  Setting a Verlet time solution algorithm/integrator
+run_style       verlet
+
+#  Loading the same fix 4 as in the init.lammps set of commands.
+#fix             4  all shake 0.001 20 1000 m 1.0  # SHAKE to keep bond distances / angles involving H-atoms fixe
+
+#  Setting a global constraint of canonical ensemble on all atoms, the temperature is set constant at 200k
+#  with a relaxation time of 100fs
+#  > Is this done right, namely sufficiently constrained? Volume is later controlled by the fix deform
+#  on all the components of the strain tensor...
+#fix             3 all nvt temp 200.0 200.0 100
+#fix             3 all langevin 200.0 200.0 100.0 699483
+#fix             3 all nvt/sllod temp ${tempt} ${tempt} 100.0
+fix             3 all nvt temp ${tempt} ${tempt} 100.0
+fix             3 all nvt temp 0.01 ${tempt} 100.0
+fix             3 all nvt temp 0.01 0.01 100.0
+
+# Note: these computes are present by default in any input script when using thermo command
+#compute thermo_press all temp
+#compute thermo_press all pressure thermo_temp
+
+#  Setting a strain constraint every 1 steps in the x-direction on the box at a strain rate of 1e-7 fs-1, position of
+#  all atoms positions are remapped following an affine transformation, namely proportional to the box deformation.
+##  Is it pertinent to remap the coordinates proportionaly to the applied
+##  strains? Should we remap velocities? Or none?
+##  This command might be moved to the C++ wrapper file (as well as all the
+##  commands that can not be set before, probably just the run command, and
+##  maybe timestep for practicality).
+#print "${eeps_00} ${eeps_11} ${eeps_22} ${eeps_01} ${eeps_02} ${eeps_12}"
+fix             1 all deform 1  x erate ${ceeps_00}                                 y erate ${ceeps_11}                                 z erate ${ceeps_22}                                xy erate ${ceeps_01}                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -7.765683e-05                                 y erate ${ceeps_11}                                 z erate ${ceeps_22}                                xy erate ${ceeps_01}                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -7.765683e-05                                 y erate -5.122762e-05                                 z erate ${ceeps_22}                                xy erate ${ceeps_01}                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -7.765683e-05                                 y erate -5.122762e-05                                 z erate 3.346635e-05                                xy erate ${ceeps_01}                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -7.765683e-05                                 y erate -5.122762e-05                                 z erate 3.346635e-05                                xy erate 8.337155e-07                                xz erate ${ceeps_02}                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -7.765683e-05                                 y erate -5.122762e-05                                 z erate 3.346635e-05                                xy erate 8.337155e-07                                xz erate -7.165799e-06                                yz erate ${ceeps_12}                                remap x
+fix             1 all deform 1  x erate -7.765683e-05                                 y erate -5.122762e-05                                 z erate 3.346635e-05                                xy erate 8.337155e-07                                xz erate -7.165799e-06                                yz erate 7.722077e-06                                remap x
+
+#  Setting 2fs timesteps
+#timestep        dts #2.0  #(in wrapper)
+timestep        ${dts} #2.0
+timestep        0.002 
+
+#  Running a molecular dynamics simulation for 2000000 timesteps
+#run             nts #2000000  #(in wrapper)
+run             ${nts} #2000000
+run             51130 
+Neighbor list info ...
+  1 neighbor list requests
+  update every 1 steps, delay 0 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 5.77118
+  ghost atom cutoff = 5.77118
+Memory usage per processor = 2.32805 Mbytes
+---------------- Step    29234 ----- CPU =      0.0000 (sec) ----------------
+Step     =          29234 CPU      = 0 Temp     =    3.189037e-06 
+Press    = 6311.76 PotEng   = -832.562 KinEng   = 7.87331e-08 
+E_vdwl   = -832.562 E_coul   = 0 E_pair   = -832.562 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.81 Ly       = 16.2455 Lz       = 21.757 
+Volume   = 3820.83 Pxx      = 8362.12 Pyy      = 6966.93 
+Pzz      = 3606.24 Pxy      = -63.8587 Pxz      = 252.671 
+Pyz      = -143.628 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.562 v_ep     = 0 
+---------------- Step    29500 ----- CPU =      0.0362 (sec) ----------------
+Step     =          29500 CPU      = 0.0361872 Temp     =   3.2685884e-06 
+Press    = 6363.88 PotEng   = -832.561 KinEng   = 8.06972e-08 
+E_vdwl   = -832.561 E_coul   = 0 E_pair   = -832.561 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8096 Ly       = 16.245 Lz       = 21.7574 
+Volume   = 3820.64 Pxx      = 8432.51 Pyy      = 7027.05 
+Pzz      = 3632.08 Pxy      = -61.1207 Pxz      = 254.834 
+Pyz      = -146.592 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.561 v_ep     = 0 
+---------------- Step    30000 ----- CPU =      0.0932 (sec) ----------------
+Step     =          30000 CPU      = 0.0931759 Temp     =   3.5017875e-06 
+Press    = 6462.23 PotEng   = -832.558 KinEng   = 8.64545e-08 
+E_vdwl   = -832.558 E_coul   = 0 E_pair   = -832.558 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8087 Ly       = 16.2442 Lz       = 21.7581 
+Volume   = 3820.27 Pxx      = 8565.35 Pyy      = 7140.51 
+Pzz      = 3680.84 Pxy      = -61.8577 Pxz      = 258.929 
+Pyz      = -151.021 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.558 v_ep     = 0 
+---------------- Step    30500 ----- CPU =      0.1476 (sec) ----------------
+Step     =          30500 CPU      = 0.147585 Temp     =   4.1568446e-06 
+Press    = 6560.62 PotEng   = -832.556 KinEng   = 1.02627e-07 
+E_vdwl   = -832.556 E_coul   = 0 E_pair   = -832.556 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8079 Ly       = 16.2434 Lz       = 21.7588 
+Volume   = 3819.91 Pxx      = 8698.23 Pyy      = 7254.01 
+Pzz      = 3729.62 Pxy      = -62.6922 Pxz      = 263.027 
+Pyz      = -155.446 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.556 v_ep     = 0 
+---------------- Step    31000 ----- CPU =      0.2007 (sec) ----------------
+Step     =          31000 CPU      = 0.200734 Temp     =   3.8895032e-06 
+Press    = 6659.04 PotEng   = -832.554 KinEng   = 9.60267e-08 
+E_vdwl   = -832.554 E_coul   = 0 E_pair   = -832.554 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.807 Ly       = 16.2426 Lz       = 21.7596 
+Volume   = 3819.54 Pxx      = 8831.14 Pyy      = 7367.56 
+Pzz      = 3778.42 Pxy      = -63.5903 Pxz      = 267.126 
+Pyz      = -159.866 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.554 v_ep     = 0 
+---------------- Step    31500 ----- CPU =      0.2550 (sec) ----------------
+Step     =          31500 CPU      = 0.255044 Temp     =   4.2119003e-06 
+Press    = 6757.5 PotEng   = -832.552 KinEng   = 1.03986e-07 
+E_vdwl   = -832.552 E_coul   = 0 E_pair   = -832.552 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8062 Ly       = 16.2417 Lz       = 21.7603 
+Volume   = 3819.18 Pxx      = 8964.09 Pyy      = 7481.15 
+Pzz      = 3827.25 Pxy      = -64.5174 Pxz      = 271.225 
+Pyz      = -164.281 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.552 v_ep     = 0 
+---------------- Step    32000 ----- CPU =      0.3083 (sec) ----------------
+Step     =          32000 CPU      = 0.308262 Temp     =   3.7280259e-06 
+Press    = 6855.98 PotEng   = -832.549 KinEng   = 9.20401e-08 
+E_vdwl   = -832.549 E_coul   = 0 E_pair   = -832.549 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8054 Ly       = 16.2409 Lz       = 21.761 
+Volume   = 3818.81 Pxx      = 9097.08 Pyy      = 7594.78 
+Pzz      = 3876.09 Pxy      = -65.4409 Pxz      = 275.325 
+Pyz      = -168.691 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.549 v_ep     = 0 
+---------------- Step    32500 ----- CPU =      0.3690 (sec) ----------------
+Step     =          32500 CPU      = 0.369018 Temp     =   3.7040876e-06 
+Press    = 6954.5 PotEng   = -832.547 KinEng   = 9.14491e-08 
+E_vdwl   = -832.547 E_coul   = 0 E_pair   = -832.547 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8045 Ly       = 16.2401 Lz       = 21.7617 
+Volume   = 3818.45 Pxx      = 9230.11 Pyy      = 7708.45 
+Pzz      = 3924.96 Pxy      = -66.3327 Pxz      = 279.425 
+Pyz      = -173.097 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.547 v_ep     = 0 
+---------------- Step    33000 ----- CPU =      0.4223 (sec) ----------------
+Step     =          33000 CPU      = 0.422306 Temp     =    3.908374e-06 
+Press    = 7053.06 PotEng   = -832.545 KinEng   = 9.64926e-08 
+E_vdwl   = -832.545 E_coul   = 0 E_pair   = -832.545 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8037 Ly       = 16.2392 Lz       = 21.7625 
+Volume   = 3818.08 Pxx      = 9363.17 Pyy      = 7822.16 
+Pzz      = 3973.84 Pxy      = -67.1702 Pxz      = 283.523 
+Pyz      = -177.499 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.545 v_ep     = 0 
+---------------- Step    33500 ----- CPU =      0.4763 (sec) ----------------
+Step     =          33500 CPU      = 0.47632 Temp     =   4.0031182e-06 
+Press    = 7151.65 PotEng   = -832.542 KinEng   = 9.88317e-08 
+E_vdwl   = -832.542 E_coul   = 0 E_pair   = -832.542 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8028 Ly       = 16.2384 Lz       = 21.7632 
+Volume   = 3817.72 Pxx      = 9496.27 Pyy      = 7935.92 
+Pzz      = 4022.75 Pxy      = -67.9372 Pxz      = 287.619 
+Pyz      = -181.896 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.542 v_ep     = 0 
+---------------- Step    34000 ----- CPU =      0.5281 (sec) ----------------
+Step     =          34000 CPU      = 0.528084 Temp     =   3.1917032e-06 
+Press    = 7250.27 PotEng   = -832.54 KinEng   = 7.8799e-08 
+E_vdwl   = -832.54 E_coul   = 0 E_pair   = -832.54 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.802 Ly       = 16.2376 Lz       = 21.7639 
+Volume   = 3817.35 Pxx      = 9629.41 Pyy      = 8049.72 
+Pzz      = 4071.68 Pxy      = -68.6242 Pxz      = 291.715 
+Pyz      = -186.291 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.54 v_ep     = 0 
+---------------- Step    34500 ----- CPU =      0.5800 (sec) ----------------
+Step     =          34500 CPU      = 0.580024 Temp     =   3.5112192e-06 
+Press    = 7348.93 PotEng   = -832.537 KinEng   = 8.66874e-08 
+E_vdwl   = -832.537 E_coul   = 0 E_pair   = -832.537 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8012 Ly       = 16.2367 Lz       = 21.7647 
+Volume   = 3816.99 Pxx      = 9762.59 Pyy      = 8163.57 
+Pzz      = 4120.63 Pxy      = -69.2272 Pxz      = 295.808 
+Pyz      = -190.682 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.537 v_ep     = 0 
+---------------- Step    35000 ----- CPU =      0.6527 (sec) ----------------
+Step     =          35000 CPU      = 0.652706 Temp     =   3.7514427e-06 
+Press    = 7447.62 PotEng   = -832.535 KinEng   = 9.26182e-08 
+E_vdwl   = -832.535 E_coul   = 0 E_pair   = -832.535 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.8003 Ly       = 16.2359 Lz       = 21.7654 
+Volume   = 3816.62 Pxx      = 9895.8 Pyy      = 8277.45 
+Pzz      = 4169.59 Pxy      = -69.7478 Pxz      = 299.9 
+Pyz      = -195.072 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.535 v_ep     = 0 
+---------------- Step    35500 ----- CPU =      0.7281 (sec) ----------------
+Step     =          35500 CPU      = 0.728101 Temp     =   3.5145666e-06 
+Press    = 7546.34 PotEng   = -832.532 KinEng   = 8.677e-08 
+E_vdwl   = -832.532 E_coul   = 0 E_pair   = -832.532 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7995 Ly       = 16.2351 Lz       = 21.7661 
+Volume   = 3816.26 Pxx      = 10029.1 Pyy      = 8391.38 
+Pzz      = 4218.58 Pxy      = -70.1913 Pxz      = 303.99 
+Pyz      = -199.46 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.532 v_ep     = 0 
+---------------- Step    36000 ----- CPU =      0.7808 (sec) ----------------
+Step     =          36000 CPU      = 0.780817 Temp     =   3.7161548e-06 
+Press    = 7645.1 PotEng   = -832.53 KinEng   = 9.1747e-08 
+E_vdwl   = -832.53 E_coul   = 0 E_pair   = -832.53 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7986 Ly       = 16.2342 Lz       = 21.7668 
+Volume   = 3815.9 Pxx      = 10162.3 Pyy      = 8505.35 
+Pzz      = 4267.6 Pxy      = -70.5667 Pxz      = 308.079 
+Pyz      = -203.848 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.53 v_ep     = 0 
+---------------- Step    36500 ----- CPU =      0.8582 (sec) ----------------
+Step     =          36500 CPU      = 0.858193 Temp     =    4.022455e-06 
+Press    = 7743.89 PotEng   = -832.527 KinEng   = 9.93091e-08 
+E_vdwl   = -832.527 E_coul   = 0 E_pair   = -832.527 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7978 Ly       = 16.2334 Lz       = 21.7676 
+Volume   = 3815.53 Pxx      = 10295.7 Pyy      = 8619.36 
+Pzz      = 4316.63 Pxy      = -70.8844 Pxz      = 312.168 
+Pyz      = -208.237 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.527 v_ep     = 0 
+---------------- Step    37000 ----- CPU =      0.9156 (sec) ----------------
+Step     =          37000 CPU      = 0.915564 Temp     =   3.7278823e-06 
+Press    = 7842.71 PotEng   = -832.525 KinEng   = 9.20365e-08 
+E_vdwl   = -832.525 E_coul   = 0 E_pair   = -832.525 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.797 Ly       = 16.2326 Lz       = 21.7683 
+Volume   = 3815.17 Pxx      = 10429 Pyy      = 8733.42 
+Pzz      = 4365.68 Pxy      = -71.1563 Pxz      = 316.256 
+Pyz      = -212.626 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.525 v_ep     = 0 
+---------------- Step    37500 ----- CPU =      0.9709 (sec) ----------------
+Step     =          37500 CPU      = 0.970922 Temp     =    3.794525e-06 
+Press    = 7941.57 PotEng   = -832.522 KinEng   = 9.36818e-08 
+E_vdwl   = -832.522 E_coul   = 0 E_pair   = -832.522 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7961 Ly       = 16.2317 Lz       = 21.769 
+Volume   = 3814.8 Pxx      = 10562.4 Pyy      = 8847.51 
+Pzz      = 4414.75 Pxy      = -71.3942 Pxz      = 320.344 
+Pyz      = -217.016 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.522 v_ep     = 0 
+---------------- Step    38000 ----- CPU =      1.0239 (sec) ----------------
+Step     =          38000 CPU      = 1.02391 Temp     =   3.7811516e-06 
+Press    = 8040.46 PotEng   = -832.519 KinEng   = 9.33517e-08 
+E_vdwl   = -832.519 E_coul   = 0 E_pair   = -832.519 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7953 Ly       = 16.2309 Lz       = 21.7698 
+Volume   = 3814.44 Pxx      = 10695.9 Pyy      = 8961.65 
+Pzz      = 4463.85 Pxy      = -71.6097 Pxz      = 324.432 
+Pyz      = -221.409 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.519 v_ep     = 0 
+---------------- Step    38500 ----- CPU =      1.0771 (sec) ----------------
+Step     =          38500 CPU      = 1.07712 Temp     =   4.1653493e-06 
+Press    = 8139.39 PotEng   = -832.516 KinEng   = 1.02837e-07 
+E_vdwl   = -832.516 E_coul   = 0 E_pair   = -832.516 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7945 Ly       = 16.2301 Lz       = 21.7705 
+Volume   = 3814.07 Pxx      = 10829.4 Pyy      = 9075.84 
+Pzz      = 4512.96 Pxy      = -71.8134 Pxz      = 328.521 
+Pyz      = -225.804 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.516 v_ep     = 0 
+---------------- Step    39000 ----- CPU =      1.1303 (sec) ----------------
+Step     =          39000 CPU      = 1.13033 Temp     =    4.725014e-06 
+Press    = 8238.34 PotEng   = -832.514 KinEng   = 1.16654e-07 
+E_vdwl   = -832.514 E_coul   = 0 E_pair   = -832.514 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7936 Ly       = 16.2292 Lz       = 21.7712 
+Volume   = 3813.71 Pxx      = 10962.9 Pyy      = 9190.06 
+Pzz      = 4562.1 Pxy      = -72.0144 Pxz      = 332.611 
+Pyz      = -230.202 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.514 v_ep     = 0 
+---------------- Step    39500 ----- CPU =      1.1843 (sec) ----------------
+Step     =          39500 CPU      = 1.18425 Temp     =   3.9980447e-06 
+Press    = 8337.34 PotEng   = -832.511 KinEng   = 9.87065e-08 
+E_vdwl   = -832.511 E_coul   = 0 E_pair   = -832.511 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7928 Ly       = 16.2284 Lz       = 21.7719 
+Volume   = 3813.34 Pxx      = 11096.4 Pyy      = 9304.33 
+Pzz      = 4611.26 Pxy      = -72.2205 Pxz      = 336.701 
+Pyz      = -234.602 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.511 v_ep     = 0 
+---------------- Step    40000 ----- CPU =      1.2375 (sec) ----------------
+Step     =          40000 CPU      = 1.23746 Temp     =   4.2926255e-06 
+Press    = 8436.36 PotEng   = -832.508 KinEng   = 1.05979e-07 
+E_vdwl   = -832.508 E_coul   = 0 E_pair   = -832.508 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7919 Ly       = 16.2276 Lz       = 21.7727 
+Volume   = 3812.98 Pxx      = 11230 Pyy      = 9418.64 
+Pzz      = 4660.43 Pxy      = -72.4379 Pxz      = 340.794 
+Pyz      = -239.005 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.508 v_ep     = 0 
+---------------- Step    40500 ----- CPU =      1.2917 (sec) ----------------
+Step     =          40500 CPU      = 1.29172 Temp     =   3.8428481e-06 
+Press    = 8535.42 PotEng   = -832.505 KinEng   = 9.48749e-08 
+E_vdwl   = -832.505 E_coul   = 0 E_pair   = -832.505 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7911 Ly       = 16.2267 Lz       = 21.7734 
+Volume   = 3812.61 Pxx      = 11363.6 Pyy      = 9533 
+Pzz      = 4709.63 Pxy      = -72.6714 Pxz      = 344.887 
+Pyz      = -243.41 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.505 v_ep     = 0 
+---------------- Step    41000 ----- CPU =      1.3458 (sec) ----------------
+Step     =          41000 CPU      = 1.34577 Temp     =   3.6472341e-06 
+Press    = 8634.52 PotEng   = -832.502 KinEng   = 9.00454e-08 
+E_vdwl   = -832.502 E_coul   = 0 E_pair   = -832.502 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7903 Ly       = 16.2259 Lz       = 21.7741 
+Volume   = 3812.25 Pxx      = 11497.3 Pyy      = 9647.39 
+Pzz      = 4758.85 Pxy      = -72.9241 Pxz      = 348.983 
+Pyz      = -247.817 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.502 v_ep     = 0 
+---------------- Step    41500 ----- CPU =      1.4041 (sec) ----------------
+Step     =          41500 CPU      = 1.40408 Temp     =   4.6470853e-06 
+Press    = 8733.65 PotEng   = -832.499 KinEng   = 1.1473e-07 
+E_vdwl   = -832.499 E_coul   = 0 E_pair   = -832.499 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7894 Ly       = 16.2251 Lz       = 21.7749 
+Volume   = 3811.88 Pxx      = 11631 Pyy      = 9761.83 
+Pzz      = 4808.09 Pxy      = -73.1981 Pxz      = 353.08 
+Pyz      = -252.224 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.499 v_ep     = 0 
+---------------- Step    42000 ----- CPU =      1.4580 (sec) ----------------
+Step     =          42000 CPU      = 1.45802 Temp     =   4.2981974e-06 
+Press    = 8832.81 PotEng   = -832.496 KinEng   = 1.06117e-07 
+E_vdwl   = -832.496 E_coul   = 0 E_pair   = -832.496 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7886 Ly       = 16.2242 Lz       = 21.7756 
+Volume   = 3811.52 Pxx      = 11764.8 Pyy      = 9876.31 
+Pzz      = 4857.36 Pxy      = -73.4943 Pxz      = 357.179 
+Pyz      = -256.633 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.496 v_ep     = 0 
+---------------- Step    42500 ----- CPU =      1.5111 (sec) ----------------
+Step     =          42500 CPU      = 1.51111 Temp     =    3.555472e-06 
+Press    = 8932 PotEng   = -832.493 KinEng   = 8.77799e-08 
+E_vdwl   = -832.493 E_coul   = 0 E_pair   = -832.493 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7877 Ly       = 16.2234 Lz       = 21.7763 
+Volume   = 3811.16 Pxx      = 11898.5 Pyy      = 9990.84 
+Pzz      = 4906.64 Pxy      = -73.8127 Pxz      = 361.28 
+Pyz      = -261.04 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.493 v_ep     = 0 
+---------------- Step    43000 ----- CPU =      1.5654 (sec) ----------------
+Step     =          43000 CPU      = 1.56538 Temp     =   4.0631328e-06 
+Press    = 9031.23 PotEng   = -832.49 KinEng   = 1.00313e-07 
+E_vdwl   = -832.49 E_coul   = 0 E_pair   = -832.49 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7869 Ly       = 16.2226 Lz       = 21.777 
+Volume   = 3810.79 Pxx      = 12032.4 Pyy      = 10105.4 
+Pzz      = 4955.94 Pxy      = -74.1526 Pxz      = 365.383 
+Pyz      = -265.446 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.49 v_ep     = 0 
+---------------- Step    43500 ----- CPU =      1.6229 (sec) ----------------
+Step     =          43500 CPU      = 1.62293 Temp     =   3.8626642e-06 
+Press    = 9130.5 PotEng   = -832.487 KinEng   = 9.53641e-08 
+E_vdwl   = -832.487 E_coul   = 0 E_pair   = -832.487 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7861 Ly       = 16.2217 Lz       = 21.7778 
+Volume   = 3810.43 Pxx      = 12166.2 Pyy      = 10220 
+Pzz      = 5005.27 Pxy      = -74.5127 Pxz      = 369.488 
+Pyz      = -269.848 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.487 v_ep     = 0 
+---------------- Step    44000 ----- CPU =      1.6767 (sec) ----------------
+Step     =          44000 CPU      = 1.67671 Temp     =    4.045484e-06 
+Press    = 9229.79 PotEng   = -832.484 KinEng   = 9.98777e-08 
+E_vdwl   = -832.484 E_coul   = 0 E_pair   = -832.484 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7852 Ly       = 16.2209 Lz       = 21.7785 
+Volume   = 3810.06 Pxx      = 12300.1 Pyy      = 10334.7 
+Pzz      = 5054.61 Pxy      = -74.8914 Pxz      = 373.595 
+Pyz      = -274.247 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.484 v_ep     = 0 
+---------------- Step    44500 ----- CPU =      1.7298 (sec) ----------------
+Step     =          44500 CPU      = 1.72984 Temp     =   4.0414365e-06 
+Press    = 9329.13 PotEng   = -832.481 KinEng   = 9.97778e-08 
+E_vdwl   = -832.481 E_coul   = 0 E_pair   = -832.481 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7844 Ly       = 16.2201 Lz       = 21.7792 
+Volume   = 3809.7 Pxx      = 12434 Pyy      = 10449.4 
+Pzz      = 5103.98 Pxy      = -75.2869 Pxz      = 377.705 
+Pyz      = -278.639 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.481 v_ep     = 0 
+---------------- Step    45000 ----- CPU =      1.7829 (sec) ----------------
+Step     =          45000 CPU      = 1.78292 Temp     =   4.2444954e-06 
+Press    = 9428.49 PotEng   = -832.478 KinEng   = 1.04791e-07 
+E_vdwl   = -832.478 E_coul   = 0 E_pair   = -832.478 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7835 Ly       = 16.2192 Lz       = 21.7799 
+Volume   = 3809.33 Pxx      = 12568 Pyy      = 10564.1 
+Pzz      = 5153.37 Pxy      = -75.6972 Pxz      = 381.816 
+Pyz      = -283.023 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.478 v_ep     = 0 
+---------------- Step    45500 ----- CPU =      1.8361 (sec) ----------------
+Step     =          45500 CPU      = 1.83609 Temp     =   3.6093505e-06 
+Press    = 9527.89 PotEng   = -832.474 KinEng   = 8.91101e-08 
+E_vdwl   = -832.474 E_coul   = 0 E_pair   = -832.474 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7827 Ly       = 16.2184 Lz       = 21.7807 
+Volume   = 3808.97 Pxx      = 12702 Pyy      = 10678.9 
+Pzz      = 5202.78 Pxy      = -76.1203 Pxz      = 385.929 
+Pyz      = -287.4 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.474 v_ep     = 0 
+---------------- Step    46000 ----- CPU =      1.8893 (sec) ----------------
+Step     =          46000 CPU      = 1.88927 Temp     =   3.9079041e-06 
+Press    = 9627.32 PotEng   = -832.471 KinEng   = 9.6481e-08 
+E_vdwl   = -832.471 E_coul   = 0 E_pair   = -832.471 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7819 Ly       = 16.2176 Lz       = 21.7814 
+Volume   = 3808.6 Pxx      = 12836.1 Pyy      = 10793.7 
+Pzz      = 5252.21 Pxy      = -76.5543 Pxz      = 390.044 
+Pyz      = -291.766 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.471 v_ep     = 0 
+---------------- Step    46500 ----- CPU =      1.9422 (sec) ----------------
+Step     =          46500 CPU      = 1.94219 Temp     =   4.4431814e-06 
+Press    = 9726.79 PotEng   = -832.468 KinEng   = 1.09696e-07 
+E_vdwl   = -832.468 E_coul   = 0 E_pair   = -832.468 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.781 Ly       = 16.2168 Lz       = 21.7821 
+Volume   = 3808.24 Pxx      = 12970.1 Pyy      = 10908.6 
+Pzz      = 5301.66 Pxy      = -76.9973 Pxz      = 394.161 
+Pyz      = -296.123 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.468 v_ep     = 0 
+---------------- Step    47000 ----- CPU =      1.9957 (sec) ----------------
+Step     =          47000 CPU      = 1.99573 Temp     =   3.5953462e-06 
+Press    = 9826.29 PotEng   = -832.464 KinEng   = 8.87644e-08 
+E_vdwl   = -832.464 E_coul   = 0 E_pair   = -832.464 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7802 Ly       = 16.2159 Lz       = 21.7829 
+Volume   = 3807.87 Pxx      = 13104.3 Pyy      = 11023.5 
+Pzz      = 5351.13 Pxy      = -77.4476 Pxz      = 398.279 
+Pyz      = -300.469 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.464 v_ep     = 0 
+---------------- Step    47500 ----- CPU =      2.0487 (sec) ----------------
+Step     =          47500 CPU      = 2.04869 Temp     =   4.1421047e-06 
+Press    = 9925.83 PotEng   = -832.461 KinEng   = 1.02263e-07 
+E_vdwl   = -832.461 E_coul   = 0 E_pair   = -832.461 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7793 Ly       = 16.2151 Lz       = 21.7836 
+Volume   = 3807.51 Pxx      = 13238.4 Pyy      = 11138.4 
+Pzz      = 5400.63 Pxy      = -77.9038 Pxz      = 402.399 
+Pyz      = -304.807 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.461 v_ep     = 0 
+---------------- Step    48000 ----- CPU =      2.1114 (sec) ----------------
+Step     =          48000 CPU      = 2.11138 Temp     =   4.0023795e-06 
+Press    = 10025.4 PotEng   = -832.458 KinEng   = 9.88135e-08 
+E_vdwl   = -832.458 E_coul   = 0 E_pair   = -832.458 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7785 Ly       = 16.2143 Lz       = 21.7843 
+Volume   = 3807.14 Pxx      = 13372.6 Pyy      = 11253.4 
+Pzz      = 5450.14 Pxy      = -78.3646 Pxz      = 406.52 
+Pyz      = -309.136 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.458 v_ep     = 0 
+---------------- Step    48500 ----- CPU =      2.1791 (sec) ----------------
+Step     =          48500 CPU      = 2.17915 Temp     =   3.6052523e-06 
+Press    = 10125 PotEng   = -832.454 KinEng   = 8.90089e-08 
+E_vdwl   = -832.454 E_coul   = 0 E_pair   = -832.454 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7777 Ly       = 16.2134 Lz       = 21.785 
+Volume   = 3806.78 Pxx      = 13506.8 Pyy      = 11368.5 
+Pzz      = 5499.68 Pxy      = -78.8289 Pxz      = 410.641 
+Pyz      = -313.461 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.454 v_ep     = 0 
+---------------- Step    49000 ----- CPU =      2.2327 (sec) ----------------
+Step     =          49000 CPU      = 2.23275 Temp     =   3.7567063e-06 
+Press    = 10224.6 PotEng   = -832.451 KinEng   = 9.27481e-08 
+E_vdwl   = -832.451 E_coul   = 0 E_pair   = -832.451 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7768 Ly       = 16.2126 Lz       = 21.7858 
+Volume   = 3806.41 Pxx      = 13641.1 Pyy      = 11483.6 
+Pzz      = 5549.23 Pxy      = -79.2958 Pxz      = 414.763 
+Pyz      = -317.783 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.451 v_ep     = 0 
+---------------- Step    49500 ----- CPU =      2.2865 (sec) ----------------
+Step     =          49500 CPU      = 2.28648 Temp     =   3.8702199e-06 
+Press    = 10324.3 PotEng   = -832.447 KinEng   = 9.55507e-08 
+E_vdwl   = -832.447 E_coul   = 0 E_pair   = -832.447 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.776 Ly       = 16.2118 Lz       = 21.7865 
+Volume   = 3806.05 Pxx      = 13775.4 Pyy      = 11598.7 
+Pzz      = 5598.81 Pxy      = -79.7648 Pxz      = 418.885 
+Pyz      = -322.109 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.447 v_ep     = 0 
+---------------- Step    50000 ----- CPU =      2.3399 (sec) ----------------
+Step     =          50000 CPU      = 2.33992 Temp     =   3.9007892e-06 
+Press    = 10424 PotEng   = -832.444 KinEng   = 9.63054e-08 
+E_vdwl   = -832.444 E_coul   = 0 E_pair   = -832.444 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7751 Ly       = 16.2109 Lz       = 21.7872 
+Volume   = 3805.69 Pxx      = 13909.8 Pyy      = 11713.8 
+Pzz      = 5648.41 Pxy      = -80.2355 Pxz      = 423.005 
+Pyz      = -326.444 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.444 v_ep     = 0 
+---------------- Step    50500 ----- CPU =      2.3993 (sec) ----------------
+Step     =          50500 CPU      = 2.3993 Temp     =   3.8091551e-06 
+Press    = 10523.7 PotEng   = -832.44 KinEng   = 9.4043e-08 
+E_vdwl   = -832.44 E_coul   = 0 E_pair   = -832.44 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7743 Ly       = 16.2101 Lz       = 21.788 
+Volume   = 3805.32 Pxx      = 14044.2 Pyy      = 11829.1 
+Pzz      = 5698.03 Pxy      = -80.7077 Pxz      = 427.125 
+Pyz      = -330.792 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.44 v_ep     = 0 
+---------------- Step    51000 ----- CPU =      2.4541 (sec) ----------------
+Step     =          51000 CPU      = 2.45407 Temp     =   3.6747856e-06 
+Press    = 10623.5 PotEng   = -832.436 KinEng   = 9.07256e-08 
+E_vdwl   = -832.436 E_coul   = 0 E_pair   = -832.436 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7735 Ly       = 16.2093 Lz       = 21.7887 
+Volume   = 3804.96 Pxx      = 14178.6 Pyy      = 11944.3 
+Pzz      = 5747.68 Pxy      = -81.1817 Pxz      = 431.242 
+Pyz      = -335.161 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.436 v_ep     = 0 
+---------------- Step    51500 ----- CPU =      2.5087 (sec) ----------------
+Step     =          51500 CPU      = 2.50867 Temp     =   3.9107196e-06 
+Press    = 10723.3 PotEng   = -832.433 KinEng   = 9.65505e-08 
+E_vdwl   = -832.433 E_coul   = 0 E_pair   = -832.433 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7726 Ly       = 16.2084 Lz       = 21.7894 
+Volume   = 3804.59 Pxx      = 14313 Pyy      = 12059.6 
+Pzz      = 5797.34 Pxy      = -81.6578 Pxz      = 435.357 
+Pyz      = -339.556 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.433 v_ep     = 0 
+---------------- Step    52000 ----- CPU =      2.5605 (sec) ----------------
+Step     =          52000 CPU      = 2.5605 Temp     =   4.3234162e-06 
+Press    = 10823.2 PotEng   = -832.429 KinEng   = 1.06739e-07 
+E_vdwl   = -832.429 E_coul   = 0 E_pair   = -832.429 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7718 Ly       = 16.2076 Lz       = 21.7901 
+Volume   = 3804.23 Pxx      = 14447.5 Pyy      = 12175 
+Pzz      = 5847.02 Pxy      = -82.1369 Pxz      = 439.469 
+Pyz      = -343.982 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.429 v_ep     = 0 
+---------------- Step    52500 ----- CPU =      2.6119 (sec) ----------------
+Step     =          52500 CPU      = 2.61186 Temp     =   3.9399521e-06 
+Press    = 10923 PotEng   = -832.425 KinEng   = 9.72722e-08 
+E_vdwl   = -832.425 E_coul   = 0 E_pair   = -832.425 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7709 Ly       = 16.2068 Lz       = 21.7909 
+Volume   = 3803.86 Pxx      = 14582.1 Pyy      = 12290.3 
+Pzz      = 5896.73 Pxy      = -82.62 Pxz      = 443.578 
+Pyz      = -348.44 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.425 v_ep     = 0 
+---------------- Step    53000 ----- CPU =      2.6641 (sec) ----------------
+Step     =          53000 CPU      = 2.66411 Temp     =   3.6713885e-06 
+Press    = 11023 PotEng   = -832.422 KinEng   = 9.06418e-08 
+E_vdwl   = -832.422 E_coul   = 0 E_pair   = -832.422 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7701 Ly       = 16.2059 Lz       = 21.7916 
+Volume   = 3803.5 Pxx      = 14716.6 Pyy      = 12405.8 
+Pzz      = 5946.46 Pxy      = -83.1086 Pxz      = 447.683 
+Pyz      = -352.931 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.422 v_ep     = 0 
+---------------- Step    53500 ----- CPU =      2.7156 (sec) ----------------
+Step     =          53500 CPU      = 2.7156 Temp     =   3.7004022e-06 
+Press    = 11122.9 PotEng   = -832.418 KinEng   = 9.13581e-08 
+E_vdwl   = -832.418 E_coul   = 0 E_pair   = -832.418 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7693 Ly       = 16.2051 Lz       = 21.7923 
+Volume   = 3803.13 Pxx      = 14851.3 Pyy      = 12521.2 
+Pzz      = 5996.21 Pxy      = -83.6044 Pxz      = 451.786 
+Pyz      = -357.452 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.418 v_ep     = 0 
+---------------- Step    54000 ----- CPU =      2.7677 (sec) ----------------
+Step     =          54000 CPU      = 2.76774 Temp     =   4.3473782e-06 
+Press    = 11222.9 PotEng   = -832.414 KinEng   = 1.07331e-07 
+E_vdwl   = -832.414 E_coul   = 0 E_pair   = -832.414 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7684 Ly       = 16.2043 Lz       = 21.7931 
+Volume   = 3802.77 Pxx      = 14985.9 Pyy      = 12636.7 
+Pzz      = 6045.98 Pxy      = -84.1096 Pxz      = 455.886 
+Pyz      = -361.995 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.414 v_ep     = 0 
+---------------- Step    54500 ----- CPU =      2.8188 (sec) ----------------
+Step     =          54500 CPU      = 2.81885 Temp     =   4.1114561e-06 
+Press    = 11322.9 PotEng   = -832.41 KinEng   = 1.01506e-07 
+E_vdwl   = -832.41 E_coul   = 0 E_pair   = -832.41 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7676 Ly       = 16.2034 Lz       = 21.7938 
+Volume   = 3802.4 Pxx      = 15120.6 Pyy      = 12752.3 
+Pzz      = 6095.77 Pxy      = -84.6266 Pxz      = 459.985 
+Pyz      = -366.55 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.41 v_ep     = 0 
+---------------- Step    55000 ----- CPU =      2.8706 (sec) ----------------
+Step     =          55000 CPU      = 2.87062 Temp     =   3.7756675e-06 
+Press    = 11422.9 PotEng   = -832.406 KinEng   = 9.32163e-08 
+E_vdwl   = -832.406 E_coul   = 0 E_pair   = -832.406 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7667 Ly       = 16.2026 Lz       = 21.7945 
+Volume   = 3802.04 Pxx      = 15255.3 Pyy      = 12867.9 
+Pzz      = 6145.58 Pxy      = -85.1579 Pxz      = 464.085 
+Pyz      = -371.104 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.406 v_ep     = 0 
+---------------- Step    55500 ----- CPU =      2.9470 (sec) ----------------
+Step     =          55500 CPU      = 2.94702 Temp     =   3.9637981e-06 
+Press    = 11523 PotEng   = -832.402 KinEng   = 9.7861e-08 
+E_vdwl   = -832.402 E_coul   = 0 E_pair   = -832.402 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7659 Ly       = 16.2018 Lz       = 21.7952 
+Volume   = 3801.67 Pxx      = 15390.1 Pyy      = 12983.5 
+Pzz      = 6195.41 Pxy      = -85.7063 Pxz      = 468.187 
+Pyz      = -375.641 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.402 v_ep     = 0 
+---------------- Step    56000 ----- CPU =      3.0038 (sec) ----------------
+Step     =          56000 CPU      = 3.00379 Temp     =   4.7426725e-06 
+Press    = 11623.1 PotEng   = -832.398 KinEng   = 1.1709e-07 
+E_vdwl   = -832.398 E_coul   = 0 E_pair   = -832.398 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7651 Ly       = 16.2009 Lz       = 21.796 
+Volume   = 3801.31 Pxx      = 15524.9 Pyy      = 13099.2 
+Pzz      = 6245.27 Pxy      = -86.2744 Pxz      = 472.293 
+Pyz      = -380.146 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.398 v_ep     = 0 
+---------------- Step    56500 ----- CPU =      3.0559 (sec) ----------------
+Step     =          56500 CPU      = 3.05592 Temp     =   3.9890326e-06 
+Press    = 11723.3 PotEng   = -832.394 KinEng   = 9.8484e-08 
+E_vdwl   = -832.394 E_coul   = 0 E_pair   = -832.394 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7642 Ly       = 16.2001 Lz       = 21.7967 
+Volume   = 3800.94 Pxx      = 15659.7 Pyy      = 13215 
+Pzz      = 6295.15 Pxy      = -86.8647 Pxz      = 476.406 
+Pyz      = -384.606 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.394 v_ep     = 0 
+---------------- Step    57000 ----- CPU =      3.1075 (sec) ----------------
+Step     =          57000 CPU      = 3.1075 Temp     =   4.1351389e-06 
+Press    = 11823.5 PotEng   = -832.39 KinEng   = 1.02091e-07 
+E_vdwl   = -832.39 E_coul   = 0 E_pair   = -832.39 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7634 Ly       = 16.1993 Lz       = 21.7974 
+Volume   = 3800.58 Pxx      = 15794.6 Pyy      = 13330.7 
+Pzz      = 6345.04 Pxy      = -87.4789 Pxz      = 480.526 
+Pyz      = -389.013 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.39 v_ep     = 0 
+---------------- Step    57500 ----- CPU =      3.1596 (sec) ----------------
+Step     =          57500 CPU      = 3.15959 Temp     =   3.9167013e-06 
+Press    = 11923.7 PotEng   = -832.386 KinEng   = 9.66982e-08 
+E_vdwl   = -832.386 E_coul   = 0 E_pair   = -832.386 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7626 Ly       = 16.1984 Lz       = 21.7982 
+Volume   = 3800.22 Pxx      = 15929.5 Pyy      = 13446.5 
+Pzz      = 6394.96 Pxy      = -88.1184 Pxz      = 484.655 
+Pyz      = -393.364 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.386 v_ep     = 0 
+---------------- Step    58000 ----- CPU =      3.2113 (sec) ----------------
+Step     =          58000 CPU      = 3.21129 Temp     =   4.4550244e-06 
+Press    = 12023.9 PotEng   = -832.382 KinEng   = 1.09989e-07 
+E_vdwl   = -832.382 E_coul   = 0 E_pair   = -832.382 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7617 Ly       = 16.1976 Lz       = 21.7989 
+Volume   = 3799.85 Pxx      = 16064.5 Pyy      = 13562.4 
+Pzz      = 6444.9 Pxy      = -88.7834 Pxz      = 488.793 
+Pyz      = -397.666 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.382 v_ep     = 0 
+---------------- Step    58500 ----- CPU =      3.2632 (sec) ----------------
+Step     =          58500 CPU      = 3.26319 Temp     =   4.2833879e-06 
+Press    = 12124.2 PotEng   = -832.378 KinEng   = 1.05751e-07 
+E_vdwl   = -832.378 E_coul   = 0 E_pair   = -832.378 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7609 Ly       = 16.1968 Lz       = 21.7996 
+Volume   = 3799.49 Pxx      = 16199.5 Pyy      = 13678.3 
+Pzz      = 6494.87 Pxy      = -89.4731 Pxz      = 492.941 
+Pyz      = -401.934 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.378 v_ep     = 0 
+---------------- Step    59000 ----- CPU =      3.3147 (sec) ----------------
+Step     =          59000 CPU      = 3.31474 Temp     =   4.1316529e-06 
+Press    = 12224.5 PotEng   = -832.374 KinEng   = 1.02005e-07 
+E_vdwl   = -832.374 E_coul   = 0 E_pair   = -832.374 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.76 Ly       = 16.1959 Lz       = 21.8003 
+Volume   = 3799.12 Pxx      = 16334.5 Pyy      = 13794.2 
+Pzz      = 6544.85 Pxy      = -90.1853 Pxz      = 497.096 
+Pyz      = -406.192 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.374 v_ep     = 0 
+---------------- Step    59500 ----- CPU =      3.3673 (sec) ----------------
+Step     =          59500 CPU      = 3.36731 Temp     =   4.6588734e-06 
+Press    = 12324.9 PotEng   = -832.37 KinEng   = 1.15021e-07 
+E_vdwl   = -832.37 E_coul   = 0 E_pair   = -832.37 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7592 Ly       = 16.1951 Lz       = 21.8011 
+Volume   = 3798.76 Pxx      = 16469.6 Pyy      = 13910.2 
+Pzz      = 6594.86 Pxy      = -90.9165 Pxz      = 501.256 
+Pyz      = -410.467 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.37 v_ep     = 0 
+---------------- Step    60000 ----- CPU =      3.4243 (sec) ----------------
+Step     =          60000 CPU      = 3.42431 Temp     =   4.4787566e-06 
+Press    = 12425.3 PotEng   = -832.365 KinEng   = 1.10575e-07 
+E_vdwl   = -832.365 E_coul   = 0 E_pair   = -832.365 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7584 Ly       = 16.1943 Lz       = 21.8018 
+Volume   = 3798.39 Pxx      = 16604.7 Pyy      = 14026.3 
+Pzz      = 6644.88 Pxy      = -91.6617 Pxz      = 505.418 
+Pyz      = -414.788 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.365 v_ep     = 0 
+---------------- Step    60500 ----- CPU =      3.4759 (sec) ----------------
+Step     =          60500 CPU      = 3.47594 Temp     =   4.4930283e-06 
+Press    = 12525.7 PotEng   = -832.361 KinEng   = 1.10927e-07 
+E_vdwl   = -832.361 E_coul   = 0 E_pair   = -832.361 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7575 Ly       = 16.1935 Lz       = 21.8025 
+Volume   = 3798.03 Pxx      = 16739.8 Pyy      = 14142.3 
+Pzz      = 6694.93 Pxy      = -92.4143 Pxz      = 509.579 
+Pyz      = -419.177 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.361 v_ep     = 0 
+---------------- Step    61000 ----- CPU =      3.5274 (sec) ----------------
+Step     =          61000 CPU      = 3.5274 Temp     =    4.608279e-06 
+Press    = 12626.2 PotEng   = -832.357 KinEng   = 1.13772e-07 
+E_vdwl   = -832.357 E_coul   = 0 E_pair   = -832.357 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7567 Ly       = 16.1926 Lz       = 21.8032 
+Volume   = 3797.66 Pxx      = 16875 Pyy      = 14258.5 
+Pzz      = 6745 Pxy      = -93.1668 Pxz      = 513.733 
+Pyz      = -423.648 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.357 v_ep     = 0 
+---------------- Step    61500 ----- CPU =      3.5789 (sec) ----------------
+Step     =          61500 CPU      = 3.57887 Temp     =   4.2084787e-06 
+Press    = 12726.6 PotEng   = -832.352 KinEng   = 1.03902e-07 
+E_vdwl   = -832.352 E_coul   = 0 E_pair   = -832.352 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7558 Ly       = 16.1918 Lz       = 21.804 
+Volume   = 3797.3 Pxx      = 17010.2 Pyy      = 14374.6 
+Pzz      = 6795.09 Pxy      = -93.9102 Pxz      = 517.879 
+Pyz      = -428.199 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.352 v_ep     = 0 
+---------------- Step    62000 ----- CPU =      3.6304 (sec) ----------------
+Step     =          62000 CPU      = 3.63036 Temp     =   4.4980657e-06 
+Press    = 12827.2 PotEng   = -832.348 KinEng   = 1.11051e-07 
+E_vdwl   = -832.348 E_coul   = 0 E_pair   = -832.348 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.755 Ly       = 16.191 Lz       = 21.8047 
+Volume   = 3796.93 Pxx      = 17145.5 Pyy      = 14490.8 
+Pzz      = 6845.21 Pxy      = -94.6347 Pxz      = 522.013 
+Pyz      = -432.81 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.348 v_ep     = 0 
+---------------- Step    62500 ----- CPU =      3.6823 (sec) ----------------
+Step     =          62500 CPU      = 3.68235 Temp     =    4.204934e-06 
+Press    = 12927.7 PotEng   = -832.343 KinEng   = 1.03814e-07 
+E_vdwl   = -832.343 E_coul   = 0 E_pair   = -832.343 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7542 Ly       = 16.1901 Lz       = 21.8054 
+Volume   = 3796.57 Pxx      = 17280.8 Pyy      = 14607.1 
+Pzz      = 6895.34 Pxy      = -95.3296 Pxz      = 526.136 
+Pyz      = -437.448 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.343 v_ep     = 0 
+---------------- Step    63000 ----- CPU =      3.7338 (sec) ----------------
+Step     =          63000 CPU      = 3.73376 Temp     =   4.1733593e-06 
+Press    = 13028.3 PotEng   = -832.339 KinEng   = 1.03035e-07 
+E_vdwl   = -832.339 E_coul   = 0 E_pair   = -832.339 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7533 Ly       = 16.1893 Lz       = 21.8062 
+Volume   = 3796.2 Pxx      = 17416.1 Pyy      = 14723.4 
+Pzz      = 6945.5 Pxy      = -95.9837 Pxz      = 530.248 
+Pyz      = -442.068 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.339 v_ep     = 0 
+---------------- Step    63500 ----- CPU =      3.7867 (sec) ----------------
+Step     =          63500 CPU      = 3.7867 Temp     =   4.0164019e-06 
+Press    = 13129 PotEng   = -832.335 KinEng   = 9.91597e-08 
+E_vdwl   = -832.335 E_coul   = 0 E_pair   = -832.335 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7525 Ly       = 16.1885 Lz       = 21.8069 
+Volume   = 3795.84 Pxx      = 17551.5 Pyy      = 14839.7 
+Pzz      = 6995.68 Pxy      = -96.5855 Pxz      = 534.353 
+Pyz      = -446.626 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.335 v_ep     = 0 
+---------------- Step    64000 ----- CPU =      3.8382 (sec) ----------------
+Step     =          64000 CPU      = 3.83818 Temp     =   4.3550362e-06 
+Press    = 13229.6 PotEng   = -832.33 KinEng   = 1.0752e-07 
+E_vdwl   = -832.33 E_coul   = 0 E_pair   = -832.33 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7516 Ly       = 16.1876 Lz       = 21.8076 
+Volume   = 3795.47 Pxx      = 17686.9 Pyy      = 14956.1 
+Pzz      = 7045.87 Pxy      = -97.1237 Pxz      = 538.455 
+Pyz      = -451.087 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.33 v_ep     = 0 
+---------------- Step    64500 ----- CPU =      3.8897 (sec) ----------------
+Step     =          64500 CPU      = 3.88975 Temp     =   3.8975001e-06 
+Press    = 13330.3 PotEng   = -832.325 KinEng   = 9.62242e-08 
+E_vdwl   = -832.325 E_coul   = 0 E_pair   = -832.325 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7508 Ly       = 16.1868 Lz       = 21.8083 
+Volume   = 3795.11 Pxx      = 17822.3 Pyy      = 15072.5 
+Pzz      = 7096.1 Pxy      = -97.5878 Pxz      = 542.559 
+Pyz      = -455.438 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.325 v_ep     = 0 
+---------------- Step    65000 ----- CPU =      3.9411 (sec) ----------------
+Step     =          65000 CPU      = 3.94114 Temp     =   4.2740511e-06 
+Press    = 13431 PotEng   = -832.321 KinEng   = 1.05521e-07 
+E_vdwl   = -832.321 E_coul   = 0 E_pair   = -832.321 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.75 Ly       = 16.186 Lz       = 21.8091 
+Volume   = 3794.74 Pxx      = 17957.8 Pyy      = 15189 
+Pzz      = 7146.34 Pxy      = -97.9688 Pxz      = 546.669 
+Pyz      = -459.691 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.321 v_ep     = 0 
+---------------- Step    65500 ----- CPU =      3.9930 (sec) ----------------
+Step     =          65500 CPU      = 3.99296 Temp     =   3.9350279e-06 
+Press    = 13531.8 PotEng   = -832.316 KinEng   = 9.71507e-08 
+E_vdwl   = -832.316 E_coul   = 0 E_pair   = -832.316 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7491 Ly       = 16.1851 Lz       = 21.8098 
+Volume   = 3794.38 Pxx      = 18093.4 Pyy      = 15305.5 
+Pzz      = 7196.6 Pxy      = -98.261 Pxz      = 550.789 
+Pyz      = -463.885 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.316 v_ep     = 0 
+---------------- Step    66000 ----- CPU =      4.0442 (sec) ----------------
+Step     =          66000 CPU      = 4.04421 Temp     =   3.7443795e-06 
+Press    = 13632.6 PotEng   = -832.311 KinEng   = 9.24438e-08 
+E_vdwl   = -832.311 E_coul   = 0 E_pair   = -832.311 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7483 Ly       = 16.1843 Lz       = 21.8105 
+Volume   = 3794.01 Pxx      = 18228.9 Pyy      = 15422 
+Pzz      = 7246.89 Pxy      = -98.4628 Pxz      = 554.919 
+Pyz      = -468.081 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.311 v_ep     = 0 
+---------------- Step    66500 ----- CPU =      4.0965 (sec) ----------------
+Step     =          66500 CPU      = 4.0965 Temp     =   4.3624256e-06 
+Press    = 13733.4 PotEng   = -832.307 KinEng   = 1.07703e-07 
+E_vdwl   = -832.307 E_coul   = 0 E_pair   = -832.307 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7474 Ly       = 16.1835 Lz       = 21.8113 
+Volume   = 3793.65 Pxx      = 18364.5 Pyy      = 15538.6 
+Pzz      = 7297.19 Pxy      = -98.5788 Pxz      = 559.058 
+Pyz      = -472.342 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.307 v_ep     = 0 
+---------------- Step    67000 ----- CPU =      4.1491 (sec) ----------------
+Step     =          67000 CPU      = 4.14906 Temp     =   4.8520186e-06 
+Press    = 13834.3 PotEng   = -832.302 KinEng   = 1.1979e-07 
+E_vdwl   = -832.302 E_coul   = 0 E_pair   = -832.302 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7466 Ly       = 16.1826 Lz       = 21.812 
+Volume   = 3793.29 Pxx      = 18500.2 Pyy      = 15655.3 
+Pzz      = 7347.52 Pxy      = -98.6208 Pxz      = 563.202 
+Pyz      = -476.717 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.302 v_ep     = 0 
+---------------- Step    67500 ----- CPU =      4.2015 (sec) ----------------
+Step     =          67500 CPU      = 4.20148 Temp     =   3.8270835e-06 
+Press    = 13935.2 PotEng   = -832.297 KinEng   = 9.44857e-08 
+E_vdwl   = -832.297 E_coul   = 0 E_pair   = -832.297 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7458 Ly       = 16.1818 Lz       = 21.8127 
+Volume   = 3792.92 Pxx      = 18635.8 Pyy      = 15771.9 
+Pzz      = 7397.87 Pxy      = -98.609 Pxz      = 567.346 
+Pyz      = -481.225 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.297 v_ep     = 0 
+---------------- Step    68000 ----- CPU =      4.2528 (sec) ----------------
+Step     =          68000 CPU      = 4.25276 Temp     =   4.2049567e-06 
+Press    = 14036.2 PotEng   = -832.292 KinEng   = 1.03815e-07 
+E_vdwl   = -832.292 E_coul   = 0 E_pair   = -832.292 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7449 Ly       = 16.181 Lz       = 21.8134 
+Volume   = 3792.56 Pxx      = 18771.6 Pyy      = 15888.7 
+Pzz      = 7448.25 Pxy      = -98.5718 Pxz      = 571.482 
+Pyz      = -485.842 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.292 v_ep     = 0 
+---------------- Step    68500 ----- CPU =      4.3046 (sec) ----------------
+Step     =          68500 CPU      = 4.30464 Temp     =   4.4131013e-06 
+Press    = 14137.1 PotEng   = -832.288 KinEng   = 1.08954e-07 
+E_vdwl   = -832.288 E_coul   = 0 E_pair   = -832.288 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7441 Ly       = 16.1801 Lz       = 21.8142 
+Volume   = 3792.19 Pxx      = 18907.3 Pyy      = 16005.4 
+Pzz      = 7498.64 Pxy      = -98.5446 Pxz      = 575.608 
+Pyz      = -490.509 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.288 v_ep     = 0 
+---------------- Step    69000 ----- CPU =      4.3569 (sec) ----------------
+Step     =          69000 CPU      = 4.35689 Temp     =   4.9103083e-06 
+Press    = 14238.1 PotEng   = -832.283 KinEng   = 1.21229e-07 
+E_vdwl   = -832.283 E_coul   = 0 E_pair   = -832.283 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7432 Ly       = 16.1793 Lz       = 21.8149 
+Volume   = 3791.83 Pxx      = 19043.1 Pyy      = 16122.3 
+Pzz      = 7549.06 Pxy      = -98.5674 Pxz      = 579.721 
+Pyz      = -495.145 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.283 v_ep     = 0 
+---------------- Step    69500 ----- CPU =      4.4129 (sec) ----------------
+Step     =          69500 CPU      = 4.41295 Temp     =   4.1606169e-06 
+Press    = 14339.2 PotEng   = -832.278 KinEng   = 1.0272e-07 
+E_vdwl   = -832.278 E_coul   = 0 E_pair   = -832.278 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7424 Ly       = 16.1785 Lz       = 21.8156 
+Volume   = 3791.46 Pxx      = 19178.9 Pyy      = 16239.1 
+Pzz      = 7599.5 Pxy      = -98.6807 Pxz      = 583.823 
+Pyz      = -499.671 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.278 v_ep     = 0 
+---------------- Step    70000 ----- CPU =      4.4644 (sec) ----------------
+Step     =          70000 CPU      = 4.46438 Temp     =   4.1181446e-06 
+Press    = 14440.3 PotEng   = -832.273 KinEng   = 1.01672e-07 
+E_vdwl   = -832.273 E_coul   = 0 E_pair   = -832.273 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7416 Ly       = 16.1776 Lz       = 21.8164 
+Volume   = 3791.1 Pxx      = 19314.8 Pyy      = 16356 
+Pzz      = 7649.95 Pxy      = -98.9216 Pxz      = 587.92 
+Pyz      = -504.046 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.273 v_ep     = 0 
+---------------- Step    70500 ----- CPU =      4.5156 (sec) ----------------
+Step     =          70500 CPU      = 4.51564 Temp     =   4.1788529e-06 
+Press    = 14541.4 PotEng   = -832.268 KinEng   = 1.0317e-07 
+E_vdwl   = -832.268 E_coul   = 0 E_pair   = -832.268 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7407 Ly       = 16.1768 Lz       = 21.8171 
+Volume   = 3790.73 Pxx      = 19450.7 Pyy      = 16473 
+Pzz      = 7700.44 Pxy      = -99.3184 Pxz      = 592.021 
+Pyz      = -508.28 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.268 v_ep     = 0 
+---------------- Step    71000 ----- CPU =      4.5674 (sec) ----------------
+Step     =          71000 CPU      = 4.56744 Temp     =    4.264771e-06 
+Press    = 14642.5 PotEng   = -832.263 KinEng   = 1.05292e-07 
+E_vdwl   = -832.263 E_coul   = 0 E_pair   = -832.263 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7399 Ly       = 16.176 Lz       = 21.8178 
+Volume   = 3790.37 Pxx      = 19586.7 Pyy      = 16589.9 
+Pzz      = 7750.94 Pxy      = -99.8871 Pxz      = 596.134 
+Pyz      = -512.441 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.263 v_ep     = 0 
+---------------- Step    71500 ----- CPU =      4.6198 (sec) ----------------
+Step     =          71500 CPU      = 4.61978 Temp     =   4.0750216e-06 
+Press    = 14743.7 PotEng   = -832.258 KinEng   = 1.00607e-07 
+E_vdwl   = -832.258 E_coul   = 0 E_pair   = -832.258 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.739 Ly       = 16.1751 Lz       = 21.8185 
+Volume   = 3790 Pxx      = 19722.6 Pyy      = 16707 
+Pzz      = 7801.46 Pxy      = -100.628 Pxz      = 600.268 
+Pyz      = -516.632 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.258 v_ep     = 0 
+---------------- Step    72000 ----- CPU =      4.6749 (sec) ----------------
+Step     =          72000 CPU      = 4.67488 Temp     =   4.5954354e-06 
+Press    = 14844.9 PotEng   = -832.253 KinEng   = 1.13455e-07 
+E_vdwl   = -832.253 E_coul   = 0 E_pair   = -832.253 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7382 Ly       = 16.1743 Lz       = 21.8193 
+Volume   = 3789.64 Pxx      = 19858.7 Pyy      = 16824.1 
+Pzz      = 7852.01 Pxy      = -101.524 Pxz      = 604.425 
+Pyz      = -520.955 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.253 v_ep     = 0 
+---------------- Step    72500 ----- CPU =      4.7260 (sec) ----------------
+Step     =          72500 CPU      = 4.726 Temp     =   4.1974048e-06 
+Press    = 14946.2 PotEng   = -832.247 KinEng   = 1.03628e-07 
+E_vdwl   = -832.247 E_coul   = 0 E_pair   = -832.247 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7374 Ly       = 16.1735 Lz       = 21.82 
+Volume   = 3789.27 Pxx      = 19994.7 Pyy      = 16941.2 
+Pzz      = 7902.58 Pxy      = -102.543 Pxz      = 608.605 
+Pyz      = -525.465 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.247 v_ep     = 0 
+---------------- Step    73000 ----- CPU =      4.7781 (sec) ----------------
+Step     =          73000 CPU      = 4.77811 Temp     =   4.3476846e-06 
+Press    = 15047.4 PotEng   = -832.242 KinEng   = 1.07339e-07 
+E_vdwl   = -832.242 E_coul   = 0 E_pair   = -832.242 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7365 Ly       = 16.1726 Lz       = 21.8207 
+Volume   = 3788.91 Pxx      = 20130.8 Pyy      = 17058.3 
+Pzz      = 7953.17 Pxy      = -103.634 Pxz      = 612.799 
+Pyz      = -530.147 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.242 v_ep     = 0 
+---------------- Step    73500 ----- CPU =      4.8294 (sec) ----------------
+Step     =          73500 CPU      = 4.82937 Temp     =   5.1896128e-06 
+Press    = 15148.8 PotEng   = -832.237 KinEng   = 1.28125e-07 
+E_vdwl   = -832.237 E_coul   = 0 E_pair   = -832.237 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7357 Ly       = 16.1718 Lz       = 21.8215 
+Volume   = 3788.54 Pxx      = 20267 Pyy      = 17175.6 
+Pzz      = 8003.78 Pxy      = -104.739 Pxz      = 616.997 
+Pyz      = -534.909 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.237 v_ep     = 0 
+---------------- Step    74000 ----- CPU =      4.8812 (sec) ----------------
+Step     =          74000 CPU      = 4.88116 Temp     =   4.6031351e-06 
+Press    = 15250.1 PotEng   = -832.232 KinEng   = 1.13645e-07 
+E_vdwl   = -832.232 E_coul   = 0 E_pair   = -832.232 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7348 Ly       = 16.171 Lz       = 21.8222 
+Volume   = 3788.18 Pxx      = 20403.1 Pyy      = 17292.8 
+Pzz      = 8054.42 Pxy      = -105.787 Pxz      = 621.185 
+Pyz      = -539.617 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.232 v_ep     = 0 
+---------------- Step    74500 ----- CPU =      4.9324 (sec) ----------------
+Step     =          74500 CPU      = 4.93243 Temp     =   4.3731968e-06 
+Press    = 15351.5 PotEng   = -832.227 KinEng   = 1.07968e-07 
+E_vdwl   = -832.227 E_coul   = 0 E_pair   = -832.227 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.734 Ly       = 16.1701 Lz       = 21.8229 
+Volume   = 3787.81 Pxx      = 20539.3 Pyy      = 17410.1 
+Pzz      = 8105.07 Pxy      = -106.71 Pxz      = 625.351 
+Pyz      = -544.153 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.227 v_ep     = 0 
+---------------- Step    75000 ----- CPU =      4.9845 (sec) ----------------
+Step     =          75000 CPU      = 4.98453 Temp     =   4.2274687e-06 
+Press    = 15452.9 PotEng   = -832.221 KinEng   = 1.04371e-07 
+E_vdwl   = -832.221 E_coul   = 0 E_pair   = -832.221 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7332 Ly       = 16.1693 Lz       = 21.8236 
+Volume   = 3787.45 Pxx      = 20675.6 Pyy      = 17527.4 
+Pzz      = 8155.75 Pxy      = -107.444 Pxz      = 629.491 
+Pyz      = -548.47 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.221 v_ep     = 0 
+---------------- Step    75500 ----- CPU =      5.0360 (sec) ----------------
+Step     =          75500 CPU      = 5.03597 Temp     =   4.1475986e-06 
+Press    = 15554.4 PotEng   = -832.216 KinEng   = 1.02399e-07 
+E_vdwl   = -832.216 E_coul   = 0 E_pair   = -832.216 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7323 Ly       = 16.1685 Lz       = 21.8244 
+Volume   = 3787.08 Pxx      = 20811.9 Pyy      = 17644.8 
+Pzz      = 8206.45 Pxy      = -107.94 Pxz      = 633.604 
+Pyz      = -552.618 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.216 v_ep     = 0 
+---------------- Step    76000 ----- CPU =      5.0877 (sec) ----------------
+Step     =          76000 CPU      = 5.08773 Temp     =   4.1234554e-06 
+Press    = 15655.9 PotEng   = -832.21 KinEng   = 1.01803e-07 
+E_vdwl   = -832.21 E_coul   = 0 E_pair   = -832.21 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7315 Ly       = 16.1677 Lz       = 21.8251 
+Volume   = 3786.72 Pxx      = 20948.2 Pyy      = 17762.2 
+Pzz      = 8257.17 Pxy      = -108.176 Pxz      = 637.7 
+Pyz      = -556.734 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.21 v_ep     = 0 
+---------------- Step    76500 ----- CPU =      5.1389 (sec) ----------------
+Step     =          76500 CPU      = 5.13891 Temp     =   4.4446553e-06 
+Press    = 15757.4 PotEng   = -832.205 KinEng   = 1.09733e-07 
+E_vdwl   = -832.205 E_coul   = 0 E_pair   = -832.205 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7307 Ly       = 16.1668 Lz       = 21.8258 
+Volume   = 3786.35 Pxx      = 21084.6 Pyy      = 17879.7 
+Pzz      = 8307.92 Pxy      = -108.163 Pxz      = 641.792 
+Pyz      = -560.974 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.205 v_ep     = 0 
+---------------- Step    77000 ----- CPU =      5.1907 (sec) ----------------
+Step     =          77000 CPU      = 5.19075 Temp     =   4.6777308e-06 
+Press    = 15859 PotEng   = -832.2 KinEng   = 1.15487e-07 
+E_vdwl   = -832.2 E_coul   = 0 E_pair   = -832.2 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7298 Ly       = 16.166 Lz       = 21.8265 
+Volume   = 3785.99 Pxx      = 21221 Pyy      = 17997.2 
+Pzz      = 8358.68 Pxy      = -107.953 Pxz      = 645.894 
+Pyz      = -565.439 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.2 v_ep     = 0 
+---------------- Step    77500 ----- CPU =      5.2420 (sec) ----------------
+Step     =          77500 CPU      = 5.24201 Temp     =   4.9286399e-06 
+Press    = 15960.6 PotEng   = -832.194 KinEng   = 1.21682e-07 
+E_vdwl   = -832.194 E_coul   = 0 E_pair   = -832.194 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.729 Ly       = 16.1652 Lz       = 21.8273 
+Volume   = 3785.62 Pxx      = 21357.4 Pyy      = 18114.8 
+Pzz      = 8409.47 Pxy      = -107.637 Pxz      = 650.016 
+Pyz      = -570.111 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.194 v_ep     = 0 
+---------------- Step    78000 ----- CPU =      5.2942 (sec) ----------------
+Step     =          78000 CPU      = 5.29422 Temp     =   4.7207796e-06 
+Press    = 16062.2 PotEng   = -832.189 KinEng   = 1.1655e-07 
+E_vdwl   = -832.189 E_coul   = 0 E_pair   = -832.189 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7281 Ly       = 16.1643 Lz       = 21.828 
+Volume   = 3785.26 Pxx      = 21493.9 Pyy      = 18232.4 
+Pzz      = 8460.28 Pxy      = -107.333 Pxz      = 654.159 
+Pyz      = -574.86 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.189 v_ep     = 0 
+---------------- Step    78500 ----- CPU =      5.3459 (sec) ----------------
+Step     =          78500 CPU      = 5.34587 Temp     =   4.5004918e-06 
+Press    = 16163.9 PotEng   = -832.183 KinEng   = 1.11111e-07 
+E_vdwl   = -832.183 E_coul   = 0 E_pair   = -832.183 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7273 Ly       = 16.1635 Lz       = 21.8287 
+Volume   = 3784.89 Pxx      = 21630.4 Pyy      = 18350 
+Pzz      = 8511.11 Pxy      = -107.17 Pxz      = 658.317 
+Pyz      = -579.504 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.183 v_ep     = 0 
+---------------- Step    79000 ----- CPU =      5.3977 (sec) ----------------
+Step     =          79000 CPU      = 5.39773 Temp     =   4.5790583e-06 
+Press    = 16265.6 PotEng   = -832.177 KinEng   = 1.13051e-07 
+E_vdwl   = -832.177 E_coul   = 0 E_pair   = -832.177 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7265 Ly       = 16.1627 Lz       = 21.8295 
+Volume   = 3784.53 Pxx      = 21767 Pyy      = 18467.7 
+Pzz      = 8561.96 Pxy      = -107.265 Pxz      = 662.477 
+Pyz      = -583.914 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.177 v_ep     = 0 
+---------------- Step    79500 ----- CPU =      5.4533 (sec) ----------------
+Step     =          79500 CPU      = 5.45334 Temp     =   4.2243193e-06 
+Press    = 16367.3 PotEng   = -832.172 KinEng   = 1.04293e-07 
+E_vdwl   = -832.172 E_coul   = 0 E_pair   = -832.172 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7256 Ly       = 16.1618 Lz       = 21.8302 
+Volume   = 3784.17 Pxx      = 21903.6 Pyy      = 18585.5 
+Pzz      = 8612.84 Pxy      = -107.693 Pxz      = 666.627 
+Pyz      = -588.092 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.172 v_ep     = 0 
+---------------- Step    80000 ----- CPU =      5.5047 (sec) ----------------
+Step     =          80000 CPU      = 5.50468 Temp     =   4.8045022e-06 
+Press    = 16469.1 PotEng   = -832.166 KinEng   = 1.18617e-07 
+E_vdwl   = -832.166 E_coul   = 0 E_pair   = -832.166 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7248 Ly       = 16.161 Lz       = 21.8309 
+Volume   = 3783.8 Pxx      = 22040.2 Pyy      = 18703.2 
+Pzz      = 8663.74 Pxy      = -108.477 Pxz      = 670.764 
+Pyz      = -592.186 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.166 v_ep     = 0 
+---------------- Step    80364 ----- CPU =      5.5421 (sec) ----------------
+Step     =          80364 CPU      = 5.54208 Temp     =   5.5042842e-06 
+Press    = 16543.2 PotEng   = -832.162 KinEng   = 1.35894e-07 
+E_vdwl   = -832.162 E_coul   = 0 E_pair   = -832.162 
+E_bond   = 0 E_angle  = 0 E_dihed  = 0 
+Lx       = 10.7242 Ly       = 16.1604 Lz       = 21.8314 
+Volume   = 3783.53 Pxx      = 22139.7 Pyy      = 18789 
+Pzz      = 8700.8 Pxy      = -110.475 Pxz      = 673.779 
+Pyz      = -595.219 v_eb     = 0 v_ev     = 0 
+v_et     = 0 v_ew     = -832.162 v_ep     = 0 
+Loop time of 5.54211 on 2 procs for 51130 steps with 192 atoms
+
+Performance: 1594.205 ns/day, 0.015 hours/ns, 9225.721 timesteps/s
+99.8% CPU use with 2 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 4.607      | 4.6492     | 4.6915     |   2.0 | 83.89
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.48899    | 0.53924    | 0.5895     |   6.8 |  9.73
+Output  | 0.0047545  | 0.0053409  | 0.0059273  |   0.8 |  0.10
+Modify  | 0.22074    | 0.23288    | 0.24502    |   2.5 |  4.20
+Other   |            | 0.1154     |            |       |  2.08
+
+Nlocal:    96 ave 96 max 96 min
+Histogram: 2 0 0 0 0 0 0 0 0 0
+Nghost:    670 ave 670 max 670 min
+Histogram: 2 0 0 0 0 0 0 0 0 0
+Neighs:    0 ave 0 max 0 min
+Histogram: 2 0 0 0 0 0 0 0 0 0
+FullNghs:  3264 ave 3264 max 3264 min
+Histogram: 2 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 6528
+Ave neighs/atom = 34
+Neighbor list builds = 0
+Dangerous builds = 0
+
+#  Releasing fix deform constraint
+unfix 1
+
+##  Setting 2fs timesteps
+##timestep        dts #2.0  #(in wrapper)
+#timestep        ${dts} #2.0
+#
+##  Running a molecular dynamics simulation for relaxation of applied strain
+##  during the same amount of time
+##run             nts #2000000  #(in wrapper)
+#run             ${nts} #2000000
+
+#  Releasing fix constraints
+unfix 3
+#unfix 4
+
+#  Stopping dump
+#undump            atom_dump
+
+# Sample initial state
+#variable nss equal ${nssample0}
+#fix   shak all shake 0.001 20 1000 m 1.0
+#fix   wholevol all nvt temp ${tempt} ${tempt} 100.0
+#include ${locbe}/sample.mod.lammps
+#unfix wholevol
+#unfix shak
+
+#variable tmp equal f_stress[1]
+#variable pp11 equal ${tmp}
+#variable tmp equal f_stress[2]
+#variable pp22 equal ${tmp}
+#variable tmp equal f_stress[3]
+#variable pp33 equal ${tmp}
+#variable tmp equal f_stress[4]
+#variable pp12 equal ${tmp}
+#variable tmp equal f_stress[5]
+#variable pp13 equal ${tmp}
+#variable tmp equal f_stress[6]
+#variable pp23 equal ${tmp}
+write_restart /home/jinzhen/projects/SCEMa/examples/streched_polyhedron/nanoscale_output/last.5.sic_1.dump
+write_restart /home/jinzhen/projects/SCEMa/examples/streched_polyhedron/nanoscale_restart/lcts.5.sic_1.dump
+Total wall time: 0:00:05

@@ -654,8 +654,6 @@ void FEProblem<dim>::restart () {
                 else if (item_count == 15) proc_lhistory[cell][qpoint].new_stress[2][2] = std::stod(var);
                 item_count++;
             }
-            //              if(cell%90 == 0) std::cout << cell<<","<<qpoint<<","<<proc_lhistory[cell][qpoint].upd_strain[0][0]
-            //                  <<","<<proc_lhistory[cell][qpoint].new_stress[0][0] << std::endl;
         }
 
         MPI_Barrier(FE_communicator);
@@ -676,7 +674,6 @@ void FEProblem<dim>::restart () {
                         ExcInternalError());
 
                 for (unsigned int q = 0; q < quadrature_formula.size(); ++q) {
-                    //std::cout << "proc: " << this_FE_process << " cell: " << cell->active_cell_index() << " qpoint: " << q << std::endl;
                     // Assigning update strain and stress tensor
                     local_quadrature_points_history[q].upd_strain = proc_lhistory[cell->active_cell_index()][q].upd_strain;
                     local_quadrature_points_history[q].new_stress = proc_lhistory[cell->active_cell_index()][q].new_stress;
@@ -801,8 +798,6 @@ double FEProblem<dim>::assemble_system (bool first_assemble) {
 
             // Assemble local matrices for v problem
             if (first_assemble) cell_v_matrix = cell_mass;
-
-            //std::cout << "norm matrix " << cell_v_matrix.l1_norm() << " stiffness " << cell_stiffness.l1_norm() << std::endl;
 
             // Assemble local rhs for v problem
             cell_v_rhs.add(fe_timestep_length, cell_force);
@@ -1265,12 +1260,6 @@ void FEProblem<dim>::write_md_updates_list(ScaleBridgingData &scale_bridging_dat
                             // in case of extreme straining with reaxff
                             /*&& !(avg_new_stress_tensor.norm() < 1.0e8 && avg_new_strain_tensor.norm() > 3.0)*/
                        ) {
-                        //std::cout << "           "
-                        //      << " cell_id "<< cell->active_cell_index()
-                        //      << " upd norm " << local_quadrature_points_history[q].upd_strain.norm()
-                        //      << " total norm " << local_quadrature_points_history[q].new_strain.norm()
-                        //      << " total stress norm " << local_quadrature_points_history[q].new_stress.norm()
-                        //      << std::endl;
 
                         QP qp; // Struct that holds information for md job
 
@@ -1289,11 +1278,6 @@ void FEProblem<dim>::write_md_updates_list(ScaleBridgingData &scale_bridging_dat
                         qp.id = local_quadrature_points_history[q].qpid;
                         qp.material = celldata.get_composition(cell->active_cell_index());
                         scale_bridging_data.update_list.push_back(qp);
-                        //sprintf(filename, "%s/last.%s.upstrain", macrostatelocout.c_str(), cell_id);
-                        //write_tensor<dim>(filename, rot_avg_upd_strain_tensor);
-
-                        // qpupdates.push_back(local_quadrature_points_history[q].qpid); //MPI list of qps to update on this rank
-                        //std::cout<< "local qpid "<< local_quadrature_points_history[q].qpid << std::endl;
                     }
                 }
         }
@@ -1301,15 +1285,6 @@ void FEProblem<dim>::write_md_updates_list(ScaleBridgingData &scale_bridging_dat
     // Might be worth replacing indivual local file writings by a parallel vector of string
     // and globalizing this vector before this final writing step.
     gather_qp_update_list(scale_bridging_data);
-    //std::vector<int> all_qpupdates;
-    ///all_qpupdates = gather_vector<int>(qpupdates);
-    ;
-    /*for (int i=0; i < all_qpupdates.size(); i++){
-        QP qp;
-        qp.id = all_qpupdates[i];
-        qp.material = celldata.get_composition(qp.id);
-        scale_bridging_data.update_list.push_back(qp);
-    }*/
 
 }
 
@@ -1364,15 +1339,6 @@ std::vector<T> FEProblem<dim>::gather_vector(std::vector<T> local_vector) {
                 mpi_type,                                       //recvtype,
                 0,
                 FE_communicator);
-    /*
-    if (this_FE_process == 0){
-        dcout << "GATHER VECTOR OUTPUT " << total_elements << " ";
-        for (int i = 0; i < gathered_vector.size(); i++)
-        {
-            dcout << gathered_vector[i] << " " ;
-        }
-        dcout << std::endl;
-    }*/
 
     return gathered_vector;
 }
@@ -1414,8 +1380,6 @@ void FEProblem<dim>::update_stress_quadrature_point_history(const Vector<double>
             cell = dof_handler.begin_active();
             cell != dof_handler.end(); ++cell) {
         if (cell->is_locally_owned()) {
-            SymmetricTensor<2, dim> avg_upd_strain_tensor;
-            //SymmetricTensor<2,dim> avg_stress_tensor;
 
             PointHistory<dim> *local_quadrature_points_history
                 = reinterpret_cast<PointHistory<dim> *>(cell->user_pointer());
@@ -1438,31 +1402,8 @@ void FEProblem<dim>::update_stress_quadrature_point_history(const Vector<double>
 
                 if (local_quadrature_points_history[q].to_be_updated) {
 
-                    // Updating stiffness tensor
-                    /*SymmetricTensor<4,dim> stmp_stiff;
-                    sprintf(filename, "%s/last.%s.stiff", macrostatelocout.c_str(), cell_id);
-                    read_tensor<dim>(filename, stmp_stiff);
-
-                    // Rotate the output stiffness wrt the flake angles
-                    local_quadrature_points_history[q].new_stiff =
-                            rotate_tensor(stmp_stiff, transpose(local_quadrature_points_history[q].rotam));
-                     */
-
-                    // Updating stress tensor
-                    //bool load_stress = true;
-
-                    /*SymmetricTensor<4,dim> loc_stiffness;
-                    sprintf(filename, "%s/last.%s.stiff", macrostatelocout.c_str(), cell_id);
-                    read_tensor<dim>(filename, loc_stiffness);*/
-
                     QP qp;
                     qp = get_qp_with_id(qp_id, scale_bridging_data);
-                    //sprintf(filename, "%s/last.%s.stress", macrostatelocout.c_str(), cell_id);
-                    //load_stress = read_tensor<dim>(filename, loc_stress);
-                    //std::cout << "Putting stress into quadrature_points_history" << std::endl;
-                    //for (int i=0; i<6; i++){
-                    //  std::cout << " " << qp.update_stress[i];
-                    //} std::cout << std::endl;
                     SymmetricTensor<2, dim> loc_stress(qp.update_stress);
 
                     // Rotate the output stress wrt the flake angles
@@ -1483,43 +1424,6 @@ void FEProblem<dim>::update_stress_quadrature_point_history(const Vector<double>
                 }
             }
 
-            // Secant stiffness computation of the new stress tensor
-            //local_quadrature_points_history[q].new_stress =
-            //      local_quadrature_points_history[q].new_stiff*local_quadrature_points_history[q].new_strain;
-
-            // Write stress tensor for each gauss point
-            /*sprintf(filename, "%s/last.%s-%d.stress", macrostatelocout.c_str(), cell_id,q);
-            write_tensor<dim>(filename, local_quadrature_points_history[q].new_stress);*/
-
-            // Apply rotation of the sample to the new state tensors.
-            // Only needed if the mesh is modified...
-            /*const Tensor<2,dim> rotation
-            = get_rotation_matrix (displacement_update_grads[q]);
-
-            const SymmetricTensor<2,dim> rotated_new_stress
-            = symmetrize(transpose(rotation) *
-                    static_cast<Tensor<2,dim> >
-            (local_quadrature_points_history[q].new_stress) *
-            rotation);
-
-            const SymmetricTensor<2,dim> rotated_new_strain
-            = symmetrize(transpose(rotation) *
-                    static_cast<Tensor<2,dim> >
-            (local_quadrature_points_history[q].new_strain) *
-            rotation);
-
-            const SymmetricTensor<2,dim> rotated_upd_strain
-            = symmetrize(transpose(rotation) *
-                    static_cast<Tensor<2,dim> >
-            (local_quadrature_points_history[q].upd_strain) *
-            rotation);
-
-            local_quadrature_points_history[q].new_stress
-            = rotated_new_stress;
-            local_quadrature_points_history[q].new_strain
-            = rotated_new_strain;
-            local_quadrature_points_history[q].upd_strain
-            = rotated_upd_strain;*/
         }
     }
 }
@@ -1551,9 +1455,6 @@ void FEProblem<dim>::clean_transfer() {
 
                 if (local_quadrature_points_history[q].to_be_updated
                         && local_quadrature_points_history[q].hist_strain.run_new_md()) {
-                    // Removing stiffness passing file
-                    //sprintf(filename, "%s/last.%s.stiff", macrostatelocout.c_str(), cell_id);
-                    //remove(filename);
 
                     // Removing stress passing file
                     sprintf(filename, "%s/last.%s.stress", macrostatelocout.c_str(), cell_id);
@@ -2194,7 +2095,6 @@ void FEProblem<dim>::endstep () {
     // Saving files for restart
     if (timestep % freq_checkpoint == 0) {
         //write files here
-        //char timeid[1024];
         checkpoint();
     }
 
