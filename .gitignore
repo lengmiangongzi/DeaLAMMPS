@@ -64,3 +64,10 @@ test
 test/*
 test18
 test18/*
+examples/*/*/*.vtu
+examples/*/*/*.visit
+examples/*/*/*.pvd
+examples/*/*/*.svd
+examples/*/*/*.csv
+examples/*/*_output/*
+examples/*/*_log/*
